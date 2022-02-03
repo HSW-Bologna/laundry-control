@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<script src="elm.js"></script>
+
+<body>
+    <div id="elm-container" style="width: 100%; height: 100%;"></div>
+    <script type="module">
+
+        fetch("intl.json")
+            .then(response => response.json())
+            .then(json => changePage("PageSelection", json, "italiano"));
+
+        function changePage(page, translations, language) {
+            function removeAllChildNodes(parent) {
+                while (parent.firstChild) {
+                    parent.removeChild(parent.firstChild);
+                }
+            }
+
+            if (Elm.Pages[page] == undefined) {
+                return;
+            }
+
+            var container = document.getElementById("elm-container");
+            var appDiv = document.createElement("div");
+            removeAllChildNodes(container);
+            container.appendChild(appDiv);
+
+            var app = Elm.Pages[page].init({ node: appDiv, flags: [translations, language] });
+            app.ports.navigateTo.subscribe(function (message) {
+                changePage(message.page, translations, message.language);
+            });
+        }
+    </script>
+</body>
+
+</html>

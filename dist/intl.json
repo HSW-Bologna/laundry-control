@@ -1,0 +1,58 @@
+{
+    "essiccatoio": [
+        "Essiccatoio",
+        "Dryer"
+    ],
+    "lavatrice": [
+        "Lavatrice",
+        "Washing machine"
+    ],
+    "indietro": [
+        "Indietro",
+        "Back"
+    ],
+    "parametri_macchina": [
+        "Parametri macchina",
+        "Machine configuration"
+    ],
+    "controllo_remoto": [
+        "Controllo remoto",
+        "Remote control"
+    ],
+    "lavaggi": [
+        "Lavaggi",
+        "Wash cycles"
+    ],
+    "carica_configurazione": [
+        "Carica configurazione",
+        "Load configuration"
+    ],
+    "connessione_locale": [
+        "Connessione locale",
+        "Local connection"
+    ],
+    "nuova_configurazione": [
+        "Nuova configurazione",
+        "New configuration"
+    ],
+    "nuova_configurazione_creata": [
+        "Nuova configurazione creata",
+        "New configuration created"
+    ],
+    "configurazione_caricata": [
+        "Configurazione caricata con successo",
+        "Configuration loaded successfully"
+    ],
+    "configurazione_non_valida": [
+        "Configurazione non valida",
+        "Invalid configuration"
+    ],
+    "salva_configurazione": [
+        "Salva configurazione",
+        "Save configuration"
+    ],
+    "configurazione_salvata": [
+        "Configurazione salvata",
+        "Configuration saved"
+    ]
+}
