@@ -1,7 +1,9 @@
 module Pages.PageDryingMachine exposing (..)
 
+import AUTOGEN_FILE_translations as Intl exposing (languageFromString)
+import AppWidgets.AppWidgets as AppWidgets
 import Browser
-import Context exposing (Context, getTransl)
+import Context exposing (Context, translate)
 import Element as Ui
 import Html exposing (Html)
 import Json.Decode as Decode
@@ -9,7 +11,6 @@ import Ports exposing (navigateHome)
 import Widget as Widget
 import Widget.Icon as Icon
 import Widget.Material as Material
-import AppWidgets.AppWidgets as AppWidgets
 
 
 
@@ -35,9 +36,9 @@ type alias Model =
     }
 
 
-init : ( Decode.Value, String ) -> ( Model, Cmd Msg )
-init ( value, language ) =
-    ( { context = Context.fromJsonValue language value
+init : String -> ( Model, Cmd Msg )
+init language =
+    ( { context = Context <| languageFromString language
       , leftDrawerVisible = False
       }
     , Cmd.none
@@ -90,7 +91,7 @@ view model =
         Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill ]
             [ Widget.menuBar (Material.menuBar Material.defaultPalette)
                 { title =
-                    getTransl "essicatoio" model
+                    translate Intl.Essicatoio model.context
                         |> Ui.text
                         |> Ui.el []
                 , deviceClass = Ui.Desktop

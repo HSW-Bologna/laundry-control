@@ -1,34 +1,17 @@
 module Context exposing (..)
 
-import Intl
-import Json.Decode as Decode
-import Maybe.Extra as Maybe
+import AUTOGEN_FILE_translations as Intl exposing (IntlString, Language, languageFromString)
 
 
 type alias Context =
-    { language : Intl.Language, intl : Maybe Intl.Intl }
+    { language : Language }
 
 
-changeLanguage : Intl.Language -> Context -> Context
-changeLanguage language { intl } =
-    Context language intl
+changeLanguage : Language -> Context -> Context
+changeLanguage language _ =
+    Context language
 
 
-getTransl : String -> { a | context : Context } -> String
-getTransl key { context } =
-    Maybe.map (Intl.translate context.language key) context.intl
-        |> Maybe.withDefault "INVALID INTL JSON"
-
-
-translate : String -> Context -> String
-translate key { intl, language } =
-    Maybe.map (Intl.translate language key) intl
-        |> Maybe.withDefault "INVALID INTL JSON"
-
-
-fromJsonValue : String -> Decode.Value -> Context
-fromJsonValue language value =
-    Decode.decodeValue Intl.intlDecoder value
-        |> Result.toMaybe
-        |> Maybe.join
-        |> Context (Intl.languageFromString language)
+translate : IntlString -> Context -> String
+translate key { language } =
+    Intl.translate language key

@@ -1,19 +1,19 @@
 module Pages.PageSelection exposing (..)
 
+import AUTOGEN_FILE_translations as Intl exposing (Language, languageFromString, languageString)
+import AppWidgets.AppWidgets exposing (languageSelect)
 import Browser
-import Context exposing (Context, changeLanguage, getTransl)
+import Context exposing (Context, changeLanguage, translate)
 import Element as Ui
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as UiIn
 import Html exposing (Html)
-import Intl exposing (Language, languageFromString, languageString)
 import Json.Decode as Decode
 import Ports exposing (navigateToPage)
 import Widget as Widget
 import Widget.Material as Material
-import AppWidgets.AppWidgets exposing (languageSelect)
 
 
 
@@ -37,9 +37,9 @@ type alias Model =
     { context : Context }
 
 
-init : ( Decode.Value, String ) -> ( Model, Cmd Msg )
-init ( value, language ) =
-    ( Model <| Context.fromJsonValue language value, Cmd.none )
+init : String -> ( Model, Cmd Msg )
+init language =
+    ( Model <| Context (languageFromString language), Cmd.none )
 
 
 
@@ -108,7 +108,7 @@ view model =
         Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 8 ]
             [ Ui.el [ Ui.alignRight, Ui.alignTop ] (languageSelect model.context ChangeLanguage)
             , Ui.row [ Ui.centerX, Ui.centerY, Ui.spacing 128, Ui.padding 16 ]
-                [ selectionButton (getTransl "lavatrice" model) "PageWashingMachine"
-                , selectionButton (getTransl "essiccatoio" model) "PageDryingMachine"
+                [ selectionButton (translate Intl.Lavatrice model.context) "PageWashingMachine"
+                , selectionButton (translate Intl.Essicatoio model.context) "PageDryingMachine"
                 ]
             ]

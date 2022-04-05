@@ -6,6 +6,7 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "Orasund/elm-ui-framework": "1.6.1",
             "Orasund/elm-ui-widgets": "3.2.0",
             "elm/browser": "1.0.2",
@@ -22,7 +23,8 @@
             "folkertdev/elm-tiny-inflate": "1.1.2",
             "jxxcarlson/elm-tar": "4.0.0",
             "lattyware/elm-fontawesome": "5.0.0",
-            "mdgriffith/elm-ui": "1.1.8"
+            "mdgriffith/elm-ui": "1.1.8",
+            "myrho/elm-round": "1.0.4"
         },
         "indirect": {
             "BrianHicks/elm-string-graphemes": "1.0.3",

@@ -1,1 +1,3 @@
 node_modules
+dist/elm.js
+AUTOGEN_FILE_*

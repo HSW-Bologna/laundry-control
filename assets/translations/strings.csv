@@ -1,0 +1,86 @@
+Identifier, Italiano, English
+Errore, Errore, Error
+Lavatrice, Lavatrice, Washing machine
+Essicatoio, Essicatoio, Drying machine
+Self, Self, Self
+Laboratorio, Laboratorio, Laboratory
+Disabilitato, Disabilitato, Disabled
+Abilitato, Abilitato, Enabled
+ItalianoCSV, Italiano, Italian
+Inglese, Inglese, English
+Nessuno, Nessuno, Nothing
+Ms, MS, MS
+Rotondi, Rotondi, Rotondi
+Lavenda, Lavenda, Lavenda
+Schultess, Schultess, Schultess
+Hoover, Hoover, Hoover
+NuovaConfigurazione, Nuova configurazione, New configuration
+Valore, Valore, Value
+Conferma, Conferma, Confirm
+Indietro, Indietro, Back
+Cicli, Cicli, Cycles
+NuovoProgramma, Nuovo programma, New program
+InserisciIp, Inserisci indirizzo IP, Insert IP address
+NuovaConfigurazioneCreata, Nuova configurazione creata, New configuration created
+ConfigurazioneSalvata, Configurazione salvata, Configuration saved
+ConfigurazioneCaricata, Configurazione caricata, Configuration loaded
+ConfigurazioneNonValida, Configurazione non valida, Invalid configuration
+CaricaConfigurazione, Carica configurazione, Load configuration
+SalvaConfigurazione, Salva configurazione, Save configuration
+NuovaConfigurazione, Nuova configurazione, New configuration
+ConnessioneLocale, Connessione locale, Local connection
+ConnessioneRemota, Connessione remota, Remote connection
+ParametriMacchina, Parametri macchina, Machine parameters
+ControlloRemoto, Controllo remoto, Remote control
+Lingua, Lingua, Language
+LingueSelezionabiliDaFrontale, Lingue selezionabili da frontale, Available languages
+Logo, Logo, Logo
+CodiceNodoMacchina, Codice nodo macchina, Machine node code
+ModelloMacchina, Modello macchina, Machine model
+SottomodelloMacchina, Sottomodello macchina, Machine submodel
+LivelloDiAccesso, Livello di accesso, Access level
+InterfacciaDaFermo, Interfaccia da fermo, Interface while stopped
+InterfacciaInFunzionamento, Interfaccia in funzionamento, Interface while working
+NumeroMassimoDiProgrammi, Numero massimo di programmi, Max number of programs
+NumeroMassimoDiProgrammiUtente, Numero massimo di programmi utente, Max number of user programs
+VisualizzazioneKg, Visualizzazione Kg, Kg visualization
+PrezzoMacchina, Prezzo macchina, Machine price
+MenuParametri, Menu parametri, Parameters menu
+MenuSaponi, Menu saponi, Detergents menu
+MostraTotaleCicli, Mostra totale cicli, Show total cycles
+LavaggioProgrammato, Lavaggio programmato, Programmable cycle
+Cancella, Cancella, Cancel
+MoltoSporchiConPrelavaggio, Molto sporchi con prelavaggio, Very dirty with prewash
+MoltoSporchi, Molto sporchi, Very dirty
+MedioSporchiConPrelavaggio, Medio sporchi con prelavaggio, Average dirty with prewash
+MedioSporchi, Medio sporchi, Average dirty
+Colorati, Colorati, Colored
+Sintetici, Sintetici, Synthetic
+Piumoni, Piumoni, Duvets
+DelicatiAFreddo, Delicati a freddo, Cold for delicates
+Lana,Lana, Wool
+LinoETendaggi, Lino e tendaggi, Linen and curtains
+SoloCentrifuga1000Giri, Solo centrifuga (1000 giri), Centrifuge only (1000 rpm)
+SoloCentrifuga600Giri, Solo centrifuga (600 giri), Centrifuge only (600 rpm)
+Sanificazione, Sanificazione, Sanification
+Ammollo, Ammollo, Soaking
+PrelavaggioConCentrifuga, Prelavaggio con centrifuga, Prewash with centrifuge
+RisciacquoConCentrifuga, Risciacquo con centrifuga, Flushing with centrifuge
+AbilitazionePagamento, Abilitazione pagamento, Enable Payment
+GettonieraNA, 1 gettoniera NA, 1 coin acceptor NO
+GettonieraNC, 1 gettoniera NC, 1 coin acceptor NC
+GettoniereNA, 2 gettoniere NA, 2 coin acceptors NO
+GettoniereNC, 2 gettoniere NC, 2 coin acceptors NC
+GettonieraDigitale, Gettoniera digitale, Digital coin acceptor
+GettonieraLineaSingola, Gettoniera a linea singola, Single line coin acceptor
+CassaNA, Cassa NA, Cash desk NO
+CassaNC, Cassa NC, Cash desk NC
+ValoreImpulso, Valore impulso, Pulse value
+ValorePrezzoUnico, Valore prezzo unico, Global price value
+PrezzoUnico, Prezzo unico, Global price
+CifrePrezzo, Cifre prezzo, Price digits
+CifreDecimaliPrezzo, Cifre decimali prezzo, Decimal price digits
+ValoreSottoIlMinimoConsentito, Valore al di sotto del minimo consentito, Value below the allowed limit
+ValoreSopraIlMassimoConsentito, Valore al di sopra del massimo consentito, Value above the allowed limit
+ValoreNonNumerico, Valore non numerico, Not a number
+Prezzo, Prezzo, Price
