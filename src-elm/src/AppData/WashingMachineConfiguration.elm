@@ -1,10 +1,11 @@
 module AppData.WashingMachineConfiguration exposing (..)
 
-import AUTOGEN_FILE_translations as Intl exposing (IntlString, Language, Translation, setTranslation)
+import AUTOGEN_FILE_translations as Intl exposing (IntlString(..), Language, Translation, setTranslation)
 import AppData.Parameter as Parameter exposing (Parameter)
 import Array as Array exposing (Array)
 import Bytes exposing (Bytes, Endianness(..))
 import Bytes.Decode as Decode exposing (Decoder)
+import Bytes.Decode.Extra as Decode
 import Bytes.Encode as Encode exposing (Encoder)
 import Context exposing (Context, translate)
 import Element.Region exposing (description)
@@ -19,61 +20,61 @@ import Tar exposing (defaultMetadata)
 
 
 type alias MachineParameters =
-    { globalPriceValue : Int
-
-    --TODO: wrong order ^
-    , priceVisualization : Int
-    , priceDecimalDigits : Int
-    , priceDigits : Int
-    , paymentRequest : Int
-    , pulseValue : Int
-    , globalPrice : Int
-    , coinAcceptor : Int
-    , ioExpander : Int
-    , machineBusy : Int
-    , machineBusySignal : Int
-    , drainRecycle : Int
-    , detergentReducedLoad : Int
-    , levelReducedLoad : Int
-    , auxOut4Type : Int
-    , auxOut3Type : Int
-    , auxOut2Type : Int
-    , auxOut1Type : Int
-    , portHoleSwitchDelayTime : Int
-    , drainAlarmTime : Int
-    , temperatureAlarmTime : Int
-    , levelAlarmTime : Int
-    , uselessPar6 : Int
-    , stopPressTime : Int
-    , pausePressTime : Int
-    , uselessPar5 : Int
-    , uselessPar4 : Int
-    , uselessPar3 : Int
-    , uselessPar2 : Int
-    , uselessPar1 : Int
-    , showMachinePrice : Int
-    , showKg : Int
-    , scheduledProgram : Int
-    , showTotalCycles : Int
-    , soapMenuUi : Int
-    , menuUi : Int
-    , startUi : Int
-    , stopUi : Int
-    , accessLevel : Int
-    , uselessPar0 : Int
-    , maxUserPrograms : Int
-    , maxPrograms : Int
-    , revCounterCorrection : Int
-    , trapHeight : Int
-    , basketDepth : Int
-    , basketDiameter : Int
-    , nodeCode : Int
-    , machineSubModel : Int
-    , machineModel : Int
-    , logo : Int
-    , maxUiLanguages : Int
+    { name : String
     , language : Int
-    , name : String
+    , maxUiLanguages : Int
+    , logo : Int
+    , machineModel : Int
+    , machineSubModel : Int
+    , nodeCode : Int
+    , basketDiameter : Int
+    , basketDepth : Int
+    , trapHeight : Int
+    , revCounterCorrection : Int
+    , maxPrograms : Int
+    , maxUserPrograms : Int
+    , uselessPar0 : Int
+    , accessLevel : Int
+    , stopUi : Int
+    , startUi : Int
+    , menuUi : Int
+    , soapMenuUi : Int
+    , showTotalCycles : Int
+    , scheduledProgram : Int
+    , showKg : Int
+    , showMachinePrice : Int
+    , uselessPar1 : Int
+    , uselessPar2 : Int
+    , uselessPar3 : Int
+    , uselessPar4 : Int
+    , uselessPar5 : Int
+    , pausePressTime : Int
+    , stopPressTime : Int
+    , uselessPar6 : Int
+    , levelAlarmTime : Int
+    , temperatureAlarmTime : Int
+    , drainAlarmTime : Int
+    , portHoleSwitchDelayTime : Int
+    , auxOut1Type : Int
+    , auxOut2Type : Int
+    , auxOut3Type : Int
+    , auxOut4Type : Int
+    , levelReducedLoad : Int
+    , detergentReducedLoad : Int
+    , drainRecycle : Int
+    , machineBusySignal : Int
+    , machineBusy : Int
+    , ioExpander : Int
+    , coinAcceptor : Int
+    , globalPrice : Int
+    , pulseValue : Int
+    , paymentRequest : Int
+    , priceDigits : Int
+    , priceDecimalDigits : Int
+    , priceVisualization : Int
+
+    --TODO: wrong order v
+    , globalPriceValue : Int
     }
 
 
@@ -81,11 +82,20 @@ type alias MachineParameter =
     Parameter MachineParameters MachineParameters
 
 
+type alias WashParameter =
+    Parameter WashingStep MachineParameters
+
+
 type alias MachineConfiguration =
     { parmac : MachineParameters
     , parmacMetadata : List MachineParameter
     , cycles : Array WashingCycle
     }
+
+
+formatWithUM : String -> MachineParameters -> Context -> Int -> String
+formatWithUM um _ _ value =
+    String.fromInt value ++ " " ++ um
 
 
 parameterMetadataList : List MachineParameter
@@ -109,9 +119,9 @@ parameterMetadataList =
         formatNumber _ _ value =
             String.fromInt value
 
-        formatWithUM : String -> MachineParameters -> Context -> Int -> String
-        formatWithUM um _ _ value =
-            String.fromInt value ++ " " ++ um
+        formatPrice : MachineParameters -> Context -> Int -> String
+        formatPrice { priceDecimalDigits } _ val =
+            Parameter.formatPrice priceDecimalDigits val
     in
     [ { get = .language, set = \v p -> { p | language = v }, min = 0, max = 1, default = 0, description = Intl.Lingua, format = formatOption [ Intl.ItalianoCSV, Intl.Inglese ], ui = Parameter.Option }
     , { get = .maxUiLanguages, set = \v p -> { p | maxUiLanguages = v }, min = 0, max = 1, default = 1, description = Intl.LingueSelezionabiliDaFrontale, format = formatNumber, ui = Parameter.Number }
@@ -125,20 +135,53 @@ parameterMetadataList =
     , { get = .maxPrograms, set = \v p -> { p | maxPrograms = v }, min = 0, max = 100, default = 100, description = Intl.NumeroMassimoDiProgrammi, format = formatNumber, ui = Parameter.Number }
     , { get = .maxUserPrograms, set = \v p -> { p | maxUserPrograms = v }, min = 0, max = 100, default = 20, description = Intl.NumeroMassimoDiProgrammiUtente, format = formatNumber, ui = Parameter.Number }
     , { get = .showKg, set = \v p -> { p | showKg = v }, min = 0, max = 100, default = 0, description = Intl.VisualizzazioneKg, format = formatWithUM "kg", ui = Parameter.Number }
-
-    -- TODO: il prezzo macchina deve essere visualizzato in base alle cifre configurate
-    , { get = .showMachinePrice, set = \v p -> { p | showMachinePrice = v }, min = 0, max = 0xFFFF, default = 0, description = Intl.PrezzoMacchina, format = formatNumber, ui = Parameter.Number }
+    , { get = .showMachinePrice, set = \v p -> { p | showMachinePrice = v }, min = 0, max = 0xFFFF, default = 0, description = Intl.PrezzoMacchina, format = formatPrice, ui = Parameter.Number }
     , { get = .menuUi, set = \v p -> { p | menuUi = v }, min = 0, max = 1, default = 0, description = Intl.MenuParametri, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .soapMenuUi, set = \v p -> { p | soapMenuUi = v }, min = 0, max = 1, default = 0, description = Intl.MenuSaponi, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .showTotalCycles, set = \v p -> { p | showTotalCycles = v }, min = 0, max = 1, default = 0, description = Intl.MostraTotaleCicli, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .scheduledProgram, set = \v p -> { p | scheduledProgram = v }, min = 0, max = 1, default = 0, description = Intl.LavaggioProgrammato, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .coinAcceptor, set = \v p -> { p | coinAcceptor = v }, min = 0, max = 8, default = 0, description = Intl.AbilitazionePagamento, format = formatOption [ Intl.Nessuno, Intl.GettonieraNA, Intl.GettonieraNC, Intl.GettoniereNA, Intl.GettoniereNC, Intl.GettonieraDigitale, Intl.GettonieraLineaSingola, Intl.CassaNA, Intl.CassaNC ], ui = Parameter.Option }
     , { get = .pulseValue, set = \v p -> { p | pulseValue = v }, min = 1, max = 0xFFFF, default = 10, description = Intl.ValoreImpulso, format = formatNumber, ui = Parameter.Number }
-    , { get = .globalPriceValue, set = \v p -> { p | globalPriceValue = v }, min = 1, max = 0xFFFF, default = 500, description = Intl.ValorePrezzoUnico, format = formatNumber, ui = Parameter.Number }
+    , { get = .globalPriceValue, set = \v p -> { p | globalPriceValue = v }, min = 1, max = 0xFFFF, default = 500, description = Intl.ValorePrezzoUnico, format = formatPrice, ui = Parameter.Number }
     , { get = .globalPrice, set = \v p -> { p | globalPrice = v }, min = 0, max = 1, default = 0, description = Intl.PrezzoUnico, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .priceDigits, set = \v p -> { p | priceDigits = v }, min = 1, max = 6, default = 4, description = Intl.CifrePrezzo, format = formatNumber, ui = Parameter.Number }
     , { get = .priceDecimalDigits, set = \v p -> { p | priceDecimalDigits = v }, min = 0, max = 6, default = 2, description = Intl.CifreDecimaliPrezzo, format = formatNumber, ui = Parameter.Number }
     ]
+
+
+stepParameterMetadataList : Int -> List WashParameter
+stepParameterMetadataList stepType =
+    let
+        durationPar =
+            { get = .duration, set = \v p -> { p | duration = v }, min = 0, max = 3600, default = 120, description = Intl.Durata, format = formatWithUM "s", ui = Parameter.Number }
+    in
+    case stepType of
+        0 ->
+            [ durationPar ]
+
+        1 ->
+            [ durationPar ]
+
+        2 ->
+            [ durationPar ]
+
+        3 ->
+            [ durationPar ]
+
+        4 ->
+            [ durationPar ]
+
+        5 ->
+            [ durationPar ]
+
+        6 ->
+            [ durationPar ]
+
+        7 ->
+            [ durationPar ]
+
+        _ ->
+            []
 
 
 resetToDefaults : MachineConfiguration -> MachineConfiguration
@@ -159,7 +202,7 @@ changeName name ({ parmac } as config) =
 default : Context -> MachineConfiguration
 default context =
     MachineConfiguration
-        (MachineParameters 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 (translate Intl.NuovaConfigurazione context))
+        (MachineParameters (translate Intl.NuovaConfigurazione context) 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
         parameterMetadataList
         (Array.fromList [])
         |> resetToDefaults
@@ -168,59 +211,59 @@ default context =
 machineParametersDecoder : Decoder MachineParameters
 machineParametersDecoder =
     Decode.succeed MachineParameters
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.unsignedInt16 BE)
-        |> pipeline (Decode.string 33)
+        |> Decode.andMap (Decode.string 33)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
 
 
 encodeMachineParameters : MachineParameters -> Bytes
@@ -273,16 +316,81 @@ encodeMachineParameters pars =
 -- Wash Cycles
 
 
+type alias WashingStep =
+    { stepType : Int
+    , duration : Int
+    , activeTime : Int
+    , fillingSpeed : Int
+    , fillingMotion : Int
+    , fillingPause : Int
+    , washMotion : Int
+    , washPause : Int
+    , temperature : Int
+    , level : Int
+    , soapActiveTime : Int
+    , washSpeed : Int
+    , uselessPar0 : Int
+    , uselessPar1 : Int
+    , preparationSpeed : Int
+    , preparationTime : Int
+    , drainTime : Int
+    , ramps : Int
+    , centrifuge1Speed : Int
+    , centrifuge2Speed : Int
+    , centrifuge3Speed : Int
+    , ramp1Time : Int
+    , ramp2Time : Int
+    , ramp3Time : Int
+    , centrifuge1WaitTime : Int
+    , centrifuge2WaitTime : Int
+    , brakeTime : Int
+    , detergent1Time : Int
+    , detergent2Time : Int
+    , detergent3Time : Int
+    , detergent4Time : Int
+    , detergent5Time : Int
+    , detergent6Time : Int
+    , detergent7Time : Int
+    , detergent8Time : Int
+    , detergent9Time : Int
+    , detergent10Time : Int
+    , detergent1Delay : Int
+    , detergent2Delay : Int
+    , detergent3Delay : Int
+    , detergent4Delay : Int
+    , detergent5Delay : Int
+    , detergent6Delay : Int
+    , detergent7Delay : Int
+    , detergent8Delay : Int
+    , detergent9Delay : Int
+    , detergent10Delay : Int
+    , waitTime : Int
+    , heatingType : Int
+    , continousTemperatureControl : Int
+    , heating : Int
+    , washInversion : Int
+    , fillingInversion : Int
+    , movingWhileFilling : Int
+    , movingWhileWashing : Int
+    , recycling : Int
+    , coldWater : Int
+    , warmWater : Int
+    , purifiedWater : Int
+    , recovery : Int
+    }
+
+
 type alias WashingCycle =
-    { washType : Int
+    { name : Translation
     , price : Int
-    , name : Translation
+    , washType : Int
+    , steps : Array WashingStep
     }
 
 
 newWashingCycle : Int -> WashingCycle
 newWashingCycle index =
-    WashingCycle 0 0 { italiano = "Nuovo programma " ++ String.fromInt index, english = "New program " ++ String.fromInt index }
+    WashingCycle { italiano = "Nuovo programma " ++ String.fromInt index, english = "New program " ++ String.fromInt index } 0 0 Array.empty
 
 
 changeWashCycleName : String -> Language -> WashingCycle -> WashingCycle
@@ -312,6 +420,23 @@ washTypesStrings context =
         |> List.map (\s -> translate s context)
 
 
+washStepTypeToString : Context -> Int -> String
+washStepTypeToString context stepType =
+    [ Intl.Ammollo
+    , Intl.Prelavaggio
+    , Intl.Lavaggio
+    , Intl.Risciacquo
+    , Intl.Scarico
+    , Intl.Centrifuga
+    , Intl.Srotolamento
+    , Intl.AttesaOperatore
+    ]
+        |> Array.fromList
+        |> Array.get stepType
+        |> Maybe.withDefault Intl.Errore
+        |> (\s -> translate s context)
+
+
 encodeIndexFile : Array WashingCycle -> Bytes
 encodeIndexFile cycles =
     Array.indexedMap (\i _ -> stringEncoder <| String.fromInt i ++ ".bin\n") cycles
@@ -335,10 +460,76 @@ translationDecoder =
 
 washCycleDecoder : Decoder WashingCycle
 washCycleDecoder =
-    pipeline translationDecoder <|
-        pipeline (Decode.unsignedInt32 Bytes.BE) <|
-            pipeline (Decode.unsignedInt16 Bytes.BE) <|
-                Decode.succeed WashingCycle
+    Decode.map4 WashingCycle
+        translationDecoder
+        (Decode.unsignedInt32 Bytes.BE)
+        (Decode.unsignedInt16 Bytes.BE)
+        (Decode.map Array.fromList <| Decode.andThen (\s -> Decode.list s washStepDecoder) (Decode.unsignedInt16 Bytes.BE))
+
+
+washStepDecoder : Decoder WashingStep
+washStepDecoder =
+    Decode.succeed WashingStep
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
 
 
 encodeWashCycle : WashingCycle -> Bytes
@@ -455,9 +646,9 @@ createArchive { parmac, cycles } =
         |> Flate.deflateGZip
 
 
-pipeline : Decoder a -> Decoder (a -> b) -> Decoder b
-pipeline =
-    Decode.map2 (|>)
+
+--pipeline : Decoder a -> Decoder (a -> b) -> Decoder b
+--pipeline = Decode.map2 (|>)
 
 
 parmacFileName : String

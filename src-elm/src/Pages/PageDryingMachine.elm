@@ -1,15 +1,13 @@
 module Pages.PageDryingMachine exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (languageFromString)
-import AppWidgets.AppWidgets as AppWidgets
+import AppWidgets.Style as Style
 import Browser
 import Context exposing (Context, translate)
 import Element as Ui
 import Html exposing (Html)
-import Json.Decode as Decode
 import Ports exposing (navigateHome)
 import Widget as Widget
-import Widget.Icon as Icon
 import Widget.Material as Material
 
 
@@ -89,7 +87,7 @@ view : Model -> Html Msg
 view model =
     Ui.layout [] <|
         Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill ]
-            [ Widget.menuBar (Material.menuBar Material.defaultPalette)
+            [ Widget.menuBar (Material.menuBar Style.palette)
                 { title =
                     translate Intl.Essicatoio model.context
                         |> Ui.text

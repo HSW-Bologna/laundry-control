@@ -3,6 +3,7 @@ module AppWidgets.AppWidgets exposing (..)
 import AUTOGEN_FILE_translations as Intl exposing (IntlString, Language(..), languageString)
 import AppData.IpAddress exposing (IpAddress, asList)
 import AppData.Parameter as Parameter exposing (Parameter)
+import AppData.WashingMachineConfiguration as WMC exposing (WashingStep)
 import AppWidgets.Style as Style
 import Array
 import Context exposing (Context, translate)
@@ -12,6 +13,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import FontAwesome.Icon as FAIcon
 import FontAwesome.Solid as SolidIcons
 import FontAwesome.Svg as FontAwesomeSvg
 import Framework.Card as Card
@@ -135,7 +137,7 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
             , ( Intl.ParametriMacchina, goToConfig )
             ]
     in
-    (Widget.fullBleedItem (Material.fullBleedItem Material.defaultPalette)
+    (Widget.fullBleedItem (Material.fullBleedItem Style.palette)
         { onPress = Just back
         , icon = SolidIcons.home |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
         , text = translate Intl.Indietro context
@@ -144,9 +146,9 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
             , options = List.map tabOption mainOptions
             , onSelect = \s -> Maybe.andThen Tuple.second <| Array.get s <| Array.fromList mainOptions
             }
-                |> Widget.selectItem (Material.selectItem Material.defaultPalette)
+                |> Widget.selectItem (Material.selectItem Style.palette)
            )
-        ++ Widget.expansionItem (Material.expansionItem Material.defaultPalette)
+        ++ Widget.expansionItem (Material.expansionItem Style.palette)
             { onToggle = toggleCycles
             , isExpanded = cyclesExpanded
             , icon = always Ui.none
@@ -155,13 +157,13 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
                 cyclesItems context selectedCycle goToCycle cycles
             }
     )
-        |> Widget.itemList (Material.cardColumn Material.defaultPalette)
+        |> Widget.itemList (Material.cardColumn Style.palette)
         |> Ui.el ([ Ui.alignLeft, Ui.height Ui.fill ] ++ Style.border)
 
 
 cyclesItems : Context -> Maybe Int -> (Int -> msg) -> List String -> List (Widget.Item msg)
 cyclesItems context selected select cycles =
-    Widget.selectItem (Material.selectItem Material.defaultPalette)
+    Widget.selectItem (Material.selectItem Style.palette)
         { selected = selected
         , options =
             List.map (\name -> { text = name, icon = always Ui.none }) cycles
@@ -174,20 +176,20 @@ rightMenu : Context -> List ( IntlString, Maybe msg ) -> Ui.Element msg
 rightMenu context options =
     let
         menuOption ( name, msg ) =
-            Widget.fullBleedItem (Material.fullBleedItem Material.defaultPalette)
+            Widget.fullBleedItem (Material.fullBleedItem Style.palette)
                 { onPress = msg
                 , icon = always Ui.none
                 , text = translate name context
                 }
     in
     List.map menuOption options
-        |> Widget.itemList (Material.cardColumn Material.defaultPalette)
+        |> Widget.itemList (Material.cardColumn Style.palette)
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
 homeButton : Context -> msg -> Ui.Element msg
 homeButton context msg =
-    Widget.iconButton (Material.iconButton Material.defaultPalette)
+    Widget.iconButton (Material.iconButton Style.palette)
         { text = translate Intl.Indietro context
         , icon = SolidIcons.home |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
         , onPress = Just msg
@@ -199,7 +201,7 @@ ipDialog context ip msg submit =
     let
         button text event align =
             Ui.el [ align ] <|
-                Widget.textButton (Material.textButton Material.defaultPalette) { text = text, onPress = Just event }
+                Widget.textButton (Material.textButton Style.palette) { text = text, onPress = Just event }
     in
     { onDismiss = Just <| submit Nothing
     , content =
@@ -253,7 +255,7 @@ scrollbarYEl attrs body =
 
 textButton : String -> Maybe msg -> Ui.Element msg
 textButton text msg =
-    Widget.textButton (Material.textButton Material.defaultPalette)
+    Widget.textButton (Material.textButton Style.palette)
         { text = text
         , onPress = msg
         }
@@ -275,7 +277,7 @@ washTypeChoice select options selected =
         }
         |> Widget.wrappedButtonRow
             { elementRow = Material.row
-            , content = Material.outlinedButton Material.defaultPalette
+            , content = Material.outlinedButton Style.palette
             }
 
 
@@ -306,3 +308,29 @@ washTypeImage washType =
                     [ Ui.alignRight, Ui.width <| Ui.px 160 ]
                     { src = src, description = "Wash type" }
            )
+
+
+iconButton : FAIcon.Icon -> msg -> String -> Ui.Element msg
+iconButton icon msg text =
+    Widget.iconButton
+        (Material.iconButton Style.palette)
+        { text = text
+        , icon = icon |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
+        , onPress = Just <| msg
+        }
+
+
+step : Context -> WMC.MachineParameters -> (Int -> Bool -> msg) -> (Int -> WMC.WashParameter -> msg) -> Bool -> Int -> WashingStep -> Ui.Element msg
+step context parmac toggle selected expanded index s =
+    Widget.expansionItem (Material.expansionItem Style.palette)
+        { onToggle = toggle index
+        , isExpanded = expanded
+        , icon = always Ui.none
+        , text = String.fromInt index ++ " " ++ WMC.washStepTypeToString context s.stepType
+        , content =
+            WMC.stepParameterMetadataList s.stepType
+                |> List.map
+                    (parameter context s parmac (selected index))
+                |> List.map Widget.asItem
+        }
+        |> Widget.itemList (Material.cardColumn Style.palette)

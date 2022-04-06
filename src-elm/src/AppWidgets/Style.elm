@@ -1,7 +1,9 @@
 module AppWidgets.Style exposing (..)
 
+import Color as Color
 import Element as Ui
 import Element.Border
+import Widget.Material as Material
 
 
 border : List (Ui.Attribute msg)
@@ -15,6 +17,23 @@ br =
         Ui.el [ Ui.centerX, borderColor, Element.Border.width 1, Ui.height (Ui.px 0), Ui.width Ui.fill ] Ui.none
 
 
+borderColor : Ui.Attr decorative msg
 borderColor =
     Element.Border.color (Ui.rgb255 210 210 210)
 
+
+palette : Material.Palette
+palette =
+    { primary = Color.rgb255 0x21 0x96 0xF3
+    , secondary = Color.rgb255 0x60 0x7D 0x8B
+    , background = Color.rgb255 0xFF 0xFF 0xFF
+    , surface = Color.rgb255 0xFF 0xFF 0xFF
+    , error = Color.rgb255 0xB0 0x00 0x20
+    , on =
+        { primary = Color.rgb255 0xFF 0xFF 0xFF
+        , secondary = Color.rgb255 0x00 0x00 0x00
+        , background = Color.rgb255 0x00 0x00 0x00
+        , surface = Color.rgb255 0x00 0x00 0x00
+        , error = Color.rgb255 0xFF 0xFF 0xFF
+        }
+    }

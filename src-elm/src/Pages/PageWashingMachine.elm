@@ -5,7 +5,8 @@ import AppData.IpAddress exposing (IpAddress, changePart, localhost, toString)
 import AppData.WashingMachineConfiguration as WMC exposing (MachineConfiguration, MachineParameters, extractArchive)
 import AppData.WashingMachineState as WSS
 import AppWidgets.AppWidgets as AppWidgets
-import Array
+import AppWidgets.Style as Style
+import Array exposing (Array)
 import Browser
 import Bytes exposing (Bytes)
 import Context exposing (Context, translate)
@@ -100,9 +101,9 @@ toMachineConfigurationTabModel context config =
         |> MachineConfigurationModel
 
 
-toWashingCycleTabModel : Context -> Int -> WMC.WashingCycle -> WMC.MachineParameters -> TabModel
-toWashingCycleTabModel context index cycle parmac =
-    WashCyclesTab.buildModel context index cycle parmac
+toWashingCycleTabModel : Context -> Int -> Array WMC.WashingCycle -> WMC.MachineParameters -> TabModel
+toWashingCycleTabModel context index cycles parmac =
+    WashCyclesTab.buildModel context index cycles parmac
         |> WashCyclesModel
 
 
@@ -115,7 +116,7 @@ fromWashingCycleTabModel : WashCyclesTab.Model -> Model -> Model
 fromWashingCycleTabModel tabModel model =
     let
         newConfig =
-            Maybe.map (\c -> { c | cycles = Array.set tabModel.index tabModel.cycle c.cycles }) model.config
+            Maybe.map (\c -> { c | cycles = tabModel.cycles }) model.config
     in
     { model | tabModel = Just <| WashCyclesModel <| tabModel, config = newConfig }
 
@@ -156,6 +157,9 @@ port stateUpdate : (Encode.Value -> msg) -> Sub msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
+        closeTab m =
+            { m | tabModel = Nothing }
+
         newRawMessage s m =
             { m | snackbar = Snackbar.dismiss model.snackbar |> Snackbar.insert s }
 
@@ -169,12 +173,19 @@ update msg model =
             { m | visibleModal = NoModal }
 
         fillTabWithConfig config m =
+            let
+                updatedModel =
+                    { m | config = Just config, tabModel = Just <| toMachineConfigurationTabModel m.context config }
+            in
             case m.tabModel of
-                Just _ ->
-                    { m | config = Just config }
+                Just (MachineConfigurationModel _) ->
+                    updatedModel
 
                 Nothing ->
-                    { m | config = Just config, tabModel = Just <| toMachineConfigurationTabModel m.context config }
+                    updatedModel
+
+                Just _ ->
+                    { m | config = Just config }
 
         fillTabWithConnection connection m =
             case m.tabModel of
@@ -290,12 +301,8 @@ update msg model =
 
                         newConfig =
                             { config | cycles = newCycles }
-
-                        cycle =
-                            Array.get index newCycles
                     in
-                    ( Maybe.map (\c -> { model | config = Just newConfig, tabModel = Just <| toWashingCycleTabModel model.context index c newConfig.parmac }) cycle
-                        |> Maybe.withDefault model
+                    ( { model | config = Just newConfig, tabModel = Just <| toWashingCycleTabModel model.context index newCycles newConfig.parmac }
                         |> hideMenu
                     , Cmd.none
                     )
@@ -315,7 +322,12 @@ update msg model =
 
         -- Wash Cycle parameters tab messages
         ( WashCyclesMsg tabMsg, Just (WashCyclesModel tabModel) ) ->
-            ( fromWashingCycleTabModel (WashCyclesTab.update tabMsg tabModel) model
+            ( case WashCyclesTab.update tabMsg tabModel of
+                ( newTabModel, WashCyclesTab.Close ) ->
+                    fromWashingCycleTabModel newTabModel model |> closeTab
+
+                ( newTabModel, WashCyclesTab.None ) ->
+                    fromWashingCycleTabModel newTabModel model
             , Cmd.none
             )
 
@@ -435,7 +447,7 @@ view model =
         Ui.column
             [ Ui.width Ui.fill
             , Ui.height Ui.fill
-            , Snackbar.view (Material.snackbar Material.defaultPalette) (\x -> Snackbar.Message x Nothing) model.snackbar
+            , Snackbar.view (Material.snackbar Style.palette) (\x -> Snackbar.Message x Nothing) model.snackbar
                 |> Maybe.withDefault Ui.none
                 |> Ui.el [ Ui.alignBottom, Ui.alignRight, Ui.padding 32 ]
                 |> Ui.inFront
@@ -445,7 +457,7 @@ view model =
                     :: rightMenuAddition
                 )
               <|
-                Widget.menuBar (Material.menuBar Material.defaultPalette)
+                Widget.menuBar (Material.menuBar Style.palette)
                     { title =
                         translate Intl.Lavatrice model.context
                             |> Ui.text

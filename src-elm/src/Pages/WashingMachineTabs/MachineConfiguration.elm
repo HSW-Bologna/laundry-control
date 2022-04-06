@@ -4,6 +4,7 @@ import AUTOGEN_FILE_translations as Intl
 import AppData.Parameter as Parameter exposing (Parameter)
 import AppData.WashingMachineConfiguration exposing (MachineConfiguration, MachineParameter, MachineParameters, changeName)
 import AppWidgets.AppWidgets as AppWidgets
+import AppWidgets.Style as Style
 import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
@@ -109,5 +110,5 @@ view model =
                 |> List.map
                     (AppWidgets.parameter model.context model.config.parmac model.config.parmac SelectParameter)
                 |> List.map Widget.asItem
-                |> Widget.itemList (Material.cardColumn Material.defaultPalette)
+                |> Widget.itemList (Material.cardColumn Style.palette)
             ]

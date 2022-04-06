@@ -102,7 +102,7 @@ view model =
                 ]
                 { onPress = Just (PickMachine page), label = Ui.text text }
 
-        --Widget.textButton (Material.textButton Material.defaultPalette) { text = text, onPress = Just (PickMachine page) }
+        --Widget.textButton (Material.textButton Style.palette) { text = text, onPress = Just (PickMachine page) }
     in
     Ui.layout [] <|
         Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 8 ]
