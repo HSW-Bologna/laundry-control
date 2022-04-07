@@ -76,3 +76,16 @@ formatPrice decimalDigits price =
     toFloat price
         / toFloat (10 ^ decimalDigits)
         |> Round.round decimalDigits
+
+
+
+validateEditString : String -> Maybe String
+validateEditString string =
+    case string of
+        "" ->
+            Just ""
+
+        value ->
+            String.toInt value
+                |> Maybe.map (\_ -> value)
+

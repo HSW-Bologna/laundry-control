@@ -72,6 +72,14 @@ type alias MachineParameters =
     , priceDigits : Int
     , priceDecimalDigits : Int
     , priceVisualization : Int
+    , maxTemperature : Int
+    , temperatureHysteresis : Int
+    , safetyTemperature : Int
+    , termodegratationTemperature : Int
+    , levelType : Int
+    , pulsesPerLiter : Int
+    , levelHysteresisTime : Int
+    , cmMaxLevel : Int
 
     --TODO: wrong order v
     , globalPriceValue : Int
@@ -93,9 +101,37 @@ type alias MachineConfiguration =
     }
 
 
+swapWashCycles : Int -> Int -> MachineConfiguration -> ( MachineConfiguration, Int )
+swapWashCycles oldIndex newIndex config =
+    let
+        ( newCycles, result ) =
+            swapElements oldIndex newIndex config.cycles
+    in
+    ( { config | cycles = newCycles }, result )
+
+
 formatWithUM : String -> MachineParameters -> Context -> Int -> String
 formatWithUM um _ _ value =
     String.fromInt value ++ " " ++ um
+
+
+formatOption : List IntlString -> MachineParameters -> Context -> Int -> String
+formatOption options _ context value =
+    let
+        option =
+            Maybe.withDefault Intl.Errore <| Array.get value <| Array.fromList options
+    in
+    translate option context
+
+
+formatNumber : MachineParameters -> Context -> Int -> String
+formatNumber _ _ value =
+    String.fromInt value
+
+
+boolOptions : List Intl.IntlString
+boolOptions =
+    [ Intl.Disabilitato, Intl.Abilitato ]
 
 
 parameterMetadataList : List MachineParameter
@@ -103,21 +139,6 @@ parameterMetadataList =
     let
         uiOptions =
             [ Intl.Self, Intl.Laboratorio ]
-
-        boolOptions =
-            [ Intl.Disabilitato, Intl.Abilitato ]
-
-        formatOption : List IntlString -> MachineParameters -> Context -> Int -> String
-        formatOption options _ context value =
-            let
-                option =
-                    Maybe.withDefault Intl.Errore <| Array.get value <| Array.fromList options
-            in
-            translate option context
-
-        formatNumber : MachineParameters -> Context -> Int -> String
-        formatNumber _ _ value =
-            String.fromInt value
 
         formatPrice : MachineParameters -> Context -> Int -> String
         formatPrice { priceDecimalDigits } _ val =
@@ -146,39 +167,53 @@ parameterMetadataList =
     , { get = .globalPrice, set = \v p -> { p | globalPrice = v }, min = 0, max = 1, default = 0, description = Intl.PrezzoUnico, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .priceDigits, set = \v p -> { p | priceDigits = v }, min = 1, max = 6, default = 4, description = Intl.CifrePrezzo, format = formatNumber, ui = Parameter.Number }
     , { get = .priceDecimalDigits, set = \v p -> { p | priceDecimalDigits = v }, min = 0, max = 6, default = 2, description = Intl.CifreDecimaliPrezzo, format = formatNumber, ui = Parameter.Number }
+    , { get = .priceVisualization, set = \v p -> { p | priceVisualization = v }, min = 0, max = 4, default = 0, description = Intl.ModoVisualizzazionePrezzo, format = formatOption [ Intl.Nessuno, Intl.Prezzo, Intl.PrezzoERimanente, Intl.PrezzoECredito, Intl.RimanenteECredito ], ui = Parameter.Option }
+    , { get = .paymentRequest, set = \v p -> { p | priceVisualization = v }, min = 0, max = 2, default = 0, description = Intl.TipoDiPagamento, format = formatOption [ Intl.InserireGettone, Intl.InserireMoneta, Intl.PagamentoCassa, Intl.PagamentoImporto ], ui = Parameter.Option }
     ]
 
 
 stepParameterMetadataList : Int -> List WashParameter
 stepParameterMetadataList stepType =
     let
-        durationPar =
+        duration =
             { get = .duration, set = \v p -> { p | duration = v }, min = 0, max = 3600, default = 120, description = Intl.Durata, format = formatWithUM "s", ui = Parameter.Number }
+
+        activeTime max =
+            { get = .activeTime, set = \v p -> { p | activeTime = v }, min = 0, max = max, default = 0, description = Intl.TempoAttivo, format = formatOption [ Intl.Subito, Intl.DopoLivello, Intl.DopoTemperatura, Intl.DopoLivelloETemperatura, Intl.ConVelocitaRiempimento ], ui = Parameter.Option }
+
+        fillingMotion =
+            { get = .fillingMotion, set = \v p -> { p | fillingMotion = v }, min = 0, max = 1, default = 0, description = Intl.MotoCestoInRiempimento, format = formatOption boolOptions, ui = Parameter.Option }
+
+        fillingSpeed =
+            { get = .fillingSpeed, set = \v p -> { p | fillingSpeed = v }, min = 0, max = 150, default = 40, description = Intl.VelocitaInRiempimento, format = formatNumber, ui = Parameter.Number }
+
+        fillingInversion =
+            { get = .fillingInversion, set = \v p -> { p | fillingInversion = v }, min = 0, max = 1, default = 0, description = Intl.InversioneInRiempimento, format = formatOption boolOptions, ui = Parameter.Option }
     in
     case stepType of
-        0 ->
-            [ durationPar ]
-
         1 ->
-            [ durationPar ]
+            [ duration, activeTime 4, fillingMotion, fillingSpeed, fillingInversion ]
 
         2 ->
-            [ durationPar ]
+            [ duration, activeTime 4, fillingMotion, fillingSpeed, fillingInversion ]
 
         3 ->
-            [ durationPar ]
+            [ duration, activeTime 4, fillingMotion, fillingSpeed, fillingInversion ]
 
         4 ->
-            [ durationPar ]
+            [ duration, activeTime 1, fillingMotion, fillingSpeed, fillingInversion ]
 
         5 ->
-            [ durationPar ]
+            [ duration ]
 
         6 ->
-            [ durationPar ]
+            [ duration ]
 
         7 ->
-            [ durationPar ]
+            [ duration, fillingInversion ]
+
+        8 ->
+            [ duration ]
 
         _ ->
             []
@@ -202,7 +237,7 @@ changeName name ({ parmac } as config) =
 default : Context -> MachineConfiguration
 default context =
     MachineConfiguration
-        (MachineParameters (translate Intl.NuovaConfigurazione context) 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+        (MachineParameters (translate Intl.NuovaConfigurazione context) 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
         parameterMetadataList
         (Array.fromList [])
         |> resetToDefaults
@@ -212,6 +247,14 @@ machineParametersDecoder : Decoder MachineParameters
 machineParametersDecoder =
     Decode.succeed MachineParameters
         |> Decode.andMap (Decode.string 33)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
@@ -377,6 +420,7 @@ type alias WashingStep =
     , warmWater : Int
     , purifiedWater : Int
     , recovery : Int
+    , finalParameter : Int
     }
 
 
@@ -386,6 +430,15 @@ type alias WashingCycle =
     , washType : Int
     , steps : Array WashingStep
     }
+
+
+swapWashSteps : Int -> Int -> WashingCycle -> WashingCycle
+swapWashSteps oldIndex newIndex cycle =
+    let
+        ( newSteps, _ ) =
+            swapElements oldIndex newIndex cycle.steps
+    in
+    { cycle | steps = newSteps }
 
 
 newWashingCycle : Int -> WashingCycle
@@ -420,8 +473,8 @@ washTypesStrings context =
         |> List.map (\s -> translate s context)
 
 
-washStepTypeToString : Context -> Int -> String
-washStepTypeToString context stepType =
+washStepStrings : Context -> List String
+washStepStrings context =
     [ Intl.Ammollo
     , Intl.Prelavaggio
     , Intl.Lavaggio
@@ -431,10 +484,22 @@ washStepTypeToString context stepType =
     , Intl.Srotolamento
     , Intl.AttesaOperatore
     ]
+        |> List.map (\s -> translate s context)
+
+
+washStepTypeToString : Context -> Int -> String
+washStepTypeToString context stepType =
+    washStepStrings context
         |> Array.fromList
-        |> Array.get stepType
-        |> Maybe.withDefault Intl.Errore
-        |> (\s -> translate s context)
+        |> Array.get (stepType - 1)
+        |> Maybe.withDefault "Error"
+
+
+defaultWashStep : Int -> WashingStep
+defaultWashStep stepType =
+    case stepType of
+        _ ->
+            { stepType = stepType, duration = 0, activeTime = 0, fillingSpeed = 0, fillingMotion = 0, fillingPause = 0, washMotion = 0, washPause = 0, temperature = 0, level = 0, soapActiveTime = 0, washSpeed = 0, uselessPar0 = 0, uselessPar1 = 0, preparationSpeed = 0, preparationTime = 0, drainTime = 0, ramps = 0, centrifuge1Speed = 0, centrifuge2Speed = 0, centrifuge3Speed = 0, ramp1Time = 0, ramp2Time = 0, ramp3Time = 0, centrifuge1WaitTime = 0, centrifuge2WaitTime = 0, brakeTime = 0, detergent1Time = 0, detergent2Time = 0, detergent3Time = 0, detergent4Time = 0, detergent5Time = 0, detergent6Time = 0, detergent7Time = 0, detergent8Time = 0, detergent9Time = 0, detergent10Time = 0, detergent1Delay = 0, detergent2Delay = 0, detergent3Delay = 0, detergent4Delay = 0, detergent5Delay = 0, detergent6Delay = 0, detergent7Delay = 0, detergent8Delay = 0, detergent9Delay = 0, detergent10Delay = 0, waitTime = 0, heatingType = 0, continousTemperatureControl = 0, heating = 0, washInversion = 0, fillingInversion = 0, movingWhileFilling = 0, movingWhileWashing = 0, recycling = 0, coldWater = 0, warmWater = 0, purifiedWater = 0, recovery = 0, finalParameter = 0 }
 
 
 encodeIndexFile : Array WashingCycle -> Bytes
@@ -464,7 +529,11 @@ washCycleDecoder =
         translationDecoder
         (Decode.unsignedInt32 Bytes.BE)
         (Decode.unsignedInt16 Bytes.BE)
-        (Decode.map Array.fromList <| Decode.andThen (\s -> Decode.list s washStepDecoder) (Decode.unsignedInt16 Bytes.BE))
+        (Decode.map Array.fromList <|
+            Decode.andThen
+                (\s -> Decode.list s washStepDecoder)
+                (Decode.unsignedInt16 Bytes.BE)
+        )
 
 
 washStepDecoder : Decoder WashingStep
@@ -530,6 +599,79 @@ washStepDecoder =
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
+        |> Decode.andMap (Decode.withOffset 134 <| Decode.unsignedInt16 BE)
+
+
+washStepEncoder : WashingStep -> Encode.Encoder
+washStepEncoder step =
+    let
+        encodePar lens =
+            Encode.unsignedInt16 BE (lens step)
+    in
+    Encode.sequence
+        ([ encodePar .stepType
+         , encodePar .duration
+         , encodePar .activeTime
+         , encodePar .fillingSpeed
+         , encodePar .fillingMotion
+         , encodePar .fillingPause
+         , encodePar .washMotion
+         , encodePar .washPause
+         , encodePar .temperature
+         , encodePar .level
+         , encodePar .soapActiveTime
+         , encodePar .washSpeed
+         , encodePar .uselessPar0
+         , encodePar .uselessPar1
+         , encodePar .preparationSpeed
+         , encodePar .preparationTime
+         , encodePar .drainTime
+         , encodePar .ramps
+         , encodePar .centrifuge1Speed
+         , encodePar .centrifuge2Speed
+         , encodePar .centrifuge3Speed
+         , encodePar .ramp1Time
+         , encodePar .ramp2Time
+         , encodePar .ramp3Time
+         , encodePar .centrifuge1WaitTime
+         , encodePar .centrifuge2WaitTime
+         , encodePar .brakeTime
+         , encodePar .detergent1Time
+         , encodePar .detergent2Time
+         , encodePar .detergent3Time
+         , encodePar .detergent4Time
+         , encodePar .detergent5Time
+         , encodePar .detergent6Time
+         , encodePar .detergent7Time
+         , encodePar .detergent8Time
+         , encodePar .detergent9Time
+         , encodePar .detergent10Time
+         , encodePar .detergent1Delay
+         , encodePar .detergent2Delay
+         , encodePar .detergent3Delay
+         , encodePar .detergent4Delay
+         , encodePar .detergent5Delay
+         , encodePar .detergent6Delay
+         , encodePar .detergent7Delay
+         , encodePar .detergent8Delay
+         , encodePar .detergent9Delay
+         , encodePar .detergent10Delay
+         , encodePar .waitTime
+         , encodePar .heatingType
+         , encodePar .continousTemperatureControl
+         , encodePar .heating
+         , encodePar .washInversion
+         , encodePar .fillingInversion
+         , encodePar .movingWhileFilling
+         , encodePar .movingWhileWashing
+         , encodePar .recycling
+         , encodePar .coldWater
+         , encodePar .warmWater
+         , encodePar .purifiedWater
+         , encodePar .recovery
+         ]
+            ++ List.map Encode.unsignedInt8 (List.repeat 136 0)
+        )
 
 
 encodeWashCycle : WashingCycle -> Bytes
@@ -545,8 +687,9 @@ encodeWashCycle cycle =
         (List.map limitedStringEncoder names
             ++ [ Encode.unsignedInt32 Bytes.BE cycle.price
                , Encode.unsignedInt16 Bytes.BE cycle.washType
-               , Encode.unsignedInt16 Bytes.BE 0 -- TODO: num steps
+               , Encode.unsignedInt16 Bytes.BE (Array.length cycle.steps)
                ]
+            ++ List.map washStepEncoder (Array.toList cycle.steps)
         )
         |> Encode.encode
 
@@ -699,3 +842,12 @@ limitedStringDecoder =
 limitedStringEncoder : String -> Encode.Encoder
 limitedStringEncoder string =
     Encode.string <| String.left 33 <| String.padRight 33 (Char.fromCode 0) string
+
+
+swapElements : Int -> Int -> Array a -> ( Array a, Int )
+swapElements oldIndex newIndex array =
+    Maybe.map2 (\old new -> Array.set newIndex old array |> Array.set oldIndex new)
+        (Array.get oldIndex array)
+        (Array.get newIndex array)
+        |> Maybe.map (\na -> ( na, newIndex ))
+        |> Maybe.withDefault ( array, oldIndex )

@@ -88,7 +88,7 @@ parameterModificationDialog b context textChange dismiss confirm text par =
                             |> Ui.html
                         )
     in
-    Ui.column (Card.simple ++ [ Ui.spacing 16, Ui.centerX, Ui.centerY, Ui.padding 32, Ui.width <| Ui.px 380 ])
+    Ui.column (Style.modal 400)
         [ Ui.paragraph [ Ui.width Ui.fill ]
             [ translate par.description context |> Ui.text ]
         , input
@@ -158,7 +158,8 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
             }
     )
         |> Widget.itemList (Material.cardColumn Style.palette)
-        |> Ui.el ([ Ui.alignLeft, Ui.height Ui.fill ] ++ Style.border)
+        |> scrollbarYEl [ Ui.height Ui.fill, Ui.width <| Ui.px 346 ]
+        |> Ui.el ([ Ui.alignLeft, Ui.height Ui.fill, Ui.width <| Ui.px 346 ] ++ Style.border)
 
 
 cyclesItems : Context -> Maybe Int -> (Int -> msg) -> List String -> List (Widget.Item msg)
@@ -261,8 +262,8 @@ textButton text msg =
         }
 
 
-washTypeChoice : (Int -> msg) -> List String -> Int -> Ui.Element msg
-washTypeChoice select options selected =
+stringChoice : (Int -> msg) -> List String -> Int -> Ui.Element msg
+stringChoice select options selected =
     Widget.select
         { selected = Just selected
         , options =
@@ -326,7 +327,7 @@ step context parmac toggle selected expanded index s =
         { onToggle = toggle index
         , isExpanded = expanded
         , icon = always Ui.none
-        , text = String.fromInt index ++ " " ++ WMC.washStepTypeToString context s.stepType
+        , text = String.fromInt (index + 1) ++ " - " ++ WMC.washStepTypeToString context s.stepType
         , content =
             WMC.stepParameterMetadataList s.stepType
                 |> List.map

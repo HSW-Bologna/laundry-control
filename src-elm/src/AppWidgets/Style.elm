@@ -3,6 +3,7 @@ module AppWidgets.Style exposing (..)
 import Color as Color
 import Element as Ui
 import Element.Border
+import Framework.Card as Card
 import Widget.Material as Material
 
 
@@ -37,3 +38,8 @@ palette =
         , error = Color.rgb255 0xFF 0xFF 0xFF
         }
     }
+
+
+modal : Int -> List (Ui.Attribute msg)
+modal width =
+    Card.simple ++ [ Ui.spacing 16, Ui.centerX, Ui.centerY, Ui.padding 32, Ui.width <| Ui.px width ]

@@ -35,14 +35,14 @@ type Msg
 
 
 update : Msg -> Model -> Model
-update msg ({ config } as model) =
+update msg ({ config, context } as model) =
     case msg of
         ConfigNameChange name ->
             -- TODO: limita la dimensione a 32 caratteri
             { model | config = changeName name config }
 
         SelectParameter par ->
-            { model | selected = Just ( par, par.get config.parmac |> String.fromInt ) }
+            { model | selected = Just ( par, par.get config.parmac |> par.format config.parmac context ) }
 
         UnselectParameter ->
             { model | selected = Nothing }
@@ -50,7 +50,7 @@ update msg ({ config } as model) =
         ParameterChange par text ->
             case par.ui of
                 Parameter.Number ->
-                    case validateString text of
+                    case Parameter.validateEditString text of
                         Just validated ->
                             { model | selected = Just ( par, validated ) }
 
@@ -62,17 +62,6 @@ update msg ({ config } as model) =
 
         ParameterConfirm par value ->
             { model | config = { config | parmac = par.set value config.parmac }, selected = Nothing }
-
-
-validateString : String -> Maybe String
-validateString string =
-    case string of
-        "" ->
-            Just ""
-
-        value ->
-            String.toInt value
-                |> Maybe.map (\_ -> value)
 
 
 

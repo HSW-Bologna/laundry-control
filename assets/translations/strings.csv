@@ -97,3 +97,24 @@ AttesaOperatore, Attesa operatore, Waiting for operator
 Delicato, Delicato, Gentle
 Energetico, Energetico, Energetic
 Durata, Durata, Duration
+TempoAttivo, Tempo attivo, Active time
+Subito, Subito, Immediately
+DopoLivello, Dopo il livello, After the level
+DopoTemperatura, Dopo la temperatura, After the temperature
+DopoLivelloETemperatura, Dopo il livello e la temperatura, After both the level and the temperature
+ConVelocitaRiempimento, Con la velocita' di riempimento, With filling speed
+RimuovereIlPasso, Rimuovere il passo?, Remove the step?G
+MotoCestoInRiempimento, Moto del cesto in riempimento, Motion while filling up
+VelocitaInRiempimento, Velocita' in riempimento, Speed while filling up
+InversioneInRiempimento, Inversione in riempimento, Reverse running during fillup
+ModoVisualizzazionePrezzo, Modo di visualizzaizone del prezzo, Display price type
+PrezzoERimanente, Prezzo e rimanente, Price and remaining
+PrezzoECredito, Prezzo e credito, Price and credit
+RimanenteECredito, Rimanente e credito, Remaining and credit
+TipoDiPagamento, Tipo di pagamento, Payment type
+InserireGettone, Inserire gettone, Insert token
+InserireMoneta, Inserire moneta, Insert coin
+PagamentoCassa, Pagamento cassa, Pay at the desk
+PagamentoImporto, Pagamento importo, Pay the required amount
+NuovoPasso, Nuovo passo, New step
+Posizione, Posizione, Position

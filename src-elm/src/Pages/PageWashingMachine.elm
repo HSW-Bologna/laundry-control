@@ -7,6 +7,7 @@ import AppData.WashingMachineState as WSS
 import AppWidgets.AppWidgets as AppWidgets
 import AppWidgets.Style as Style
 import Array exposing (Array)
+import Array.Extra as Array
 import Browser
 import Bytes exposing (Bytes)
 import Context exposing (Context, translate)
@@ -20,7 +21,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Pages.WashingMachineTabs.MachineConfiguration as ParMacTab
 import Pages.WashingMachineTabs.RemoteControl as RemControlTab
-import Pages.WashingMachineTabs.WashCycles as WashCyclesTab
+import Pages.WashingMachineTabs.WashingCycle as WashCycleTab
 import Ports exposing (eventDecoder, navigateHome)
 import Task
 import Time
@@ -83,7 +84,7 @@ init language =
 type TabModel
     = MachineConfigurationModel ParMacTab.Model
     | RemoteControlModel
-    | WashCyclesModel WashCyclesTab.Model
+    | WashCyclesModel WashCycleTab.Model
 
 
 type VisibleModal
@@ -101,9 +102,9 @@ toMachineConfigurationTabModel context config =
         |> MachineConfigurationModel
 
 
-toWashingCycleTabModel : Context -> Int -> Array WMC.WashingCycle -> WMC.MachineParameters -> TabModel
-toWashingCycleTabModel context index cycles parmac =
-    WashCyclesTab.buildModel context index cycles parmac
+toWashingCycleTabModel : Context -> Int -> WMC.WashingCycle -> WMC.MachineParameters -> TabModel
+toWashingCycleTabModel context index cycle parmac =
+    WashCycleTab.buildModel context index cycle parmac
         |> WashCyclesModel
 
 
@@ -112,11 +113,11 @@ fromMachineConfigurationTabModel tabModel model =
     { model | config = Just tabModel.config, tabModel = Just <| MachineConfigurationModel <| tabModel }
 
 
-fromWashingCycleTabModel : WashCyclesTab.Model -> Model -> Model
+fromWashingCycleTabModel : WashCycleTab.Model -> Model -> Model
 fromWashingCycleTabModel tabModel model =
     let
         newConfig =
-            Maybe.map (\c -> { c | cycles = tabModel.cycles }) model.config
+            Maybe.map (\c -> { c | cycles = Array.update tabModel.index (always tabModel.cycle) c.cycles }) model.config
     in
     { model | tabModel = Just <| WashCyclesModel <| tabModel, config = newConfig }
 
@@ -138,7 +139,7 @@ type Msg
     | ProgramListToggle Bool
     | MachineConfigurationMsg ParMacTab.Msg
     | RemoteControlMsg RemControlTab.Msg
-    | WashCyclesMsg WashCyclesTab.Msg
+    | WashCyclesMsg WashCycleTab.Msg
     | ChangeTab TabModel
     | ChangeTabCycle Int
     | TimePassed Int
@@ -301,9 +302,17 @@ update msg model =
 
                         newConfig =
                             { config | cycles = newCycles }
+
+                        cycle =
+                            Array.get index newCycles
                     in
-                    ( { model | config = Just newConfig, tabModel = Just <| toWashingCycleTabModel model.context index newCycles newConfig.parmac }
-                        |> hideMenu
+                    ( Maybe.map
+                        (\unwrappedCycle ->
+                            { model | config = Just newConfig, tabModel = Just <| toWashingCycleTabModel model.context index unwrappedCycle newConfig.parmac }
+                                |> hideMenu
+                        )
+                        cycle
+                        |> Maybe.withDefault model
                     , Cmd.none
                     )
 
@@ -322,11 +331,41 @@ update msg model =
 
         -- Wash Cycle parameters tab messages
         ( WashCyclesMsg tabMsg, Just (WashCyclesModel tabModel) ) ->
-            ( case WashCyclesTab.update tabMsg tabModel of
-                ( newTabModel, WashCyclesTab.Close ) ->
-                    fromWashingCycleTabModel newTabModel model |> closeTab
+            let
+                modelSwappedCycles newTabModel oldIndex newIndex =
+                    Maybe.map
+                        (\realConfig ->
+                            let
+                                ( newConfig, effectiveNewIndex ) =
+                                    WMC.swapWashCycles oldIndex newIndex realConfig
+                            in
+                            fromWashingCycleTabModel { newTabModel | index = effectiveNewIndex } { model | config = Just newConfig }
+                        )
+                        model.config
+                        |> Maybe.withDefault model
+            in
+            ( case WashCycleTab.update tabMsg tabModel of
+                ( newTabModel, WashCycleTab.MoveUp index ) ->
+                    modelSwappedCycles newTabModel index (index - 1)
 
-                ( newTabModel, WashCyclesTab.None ) ->
+                ( newTabModel, WashCycleTab.MoveDown index ) ->
+                    modelSwappedCycles newTabModel index (index + 1)
+
+                ( newTabModel, WashCycleTab.Copy cycle index ) ->
+                    let
+                        newConfig =
+                            Maybe.map (\c -> { c | cycles = Array.insertAt (index + 1) cycle c.cycles }) model.config
+                    in
+                    fromWashingCycleTabModel newTabModel { model | config = newConfig }
+
+                ( newTabModel, WashCycleTab.Remove index ) ->
+                    let
+                        newConfig =
+                            Maybe.map (\c -> { c | cycles = Array.removeAt index c.cycles }) model.config
+                    in
+                    fromWashingCycleTabModel newTabModel { model | config = newConfig } |> closeTab
+
+                ( newTabModel, WashCycleTab.None ) ->
                     fromWashingCycleTabModel newTabModel model
             , Cmd.none
             )
@@ -403,7 +442,7 @@ view model =
                     RemControlTab.view model |> Ui.map RemoteControlMsg
 
                 Just (WashCyclesModel tabModel) ->
-                    WashCyclesTab.view tabModel |> Ui.map WashCyclesMsg
+                    WashCycleTab.view tabModel |> Ui.map WashCyclesMsg
 
                 Nothing ->
                     Ui.none

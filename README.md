@@ -2,4 +2,4 @@
 
 ## TODO
 
- - Stop using a json file for languages and generate an Elm file instead
+ - put limits on number of programs and steps
