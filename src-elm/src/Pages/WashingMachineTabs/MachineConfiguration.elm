@@ -17,7 +17,7 @@ import Widget.Material as Material
 type alias Model =
     { context : Context
     , config : MachineConfiguration
-    , selected : Maybe ( MachineParameter, String )
+    , selected : Maybe ( MachineParameter, AppWidgets.ParameterModificationData )
     }
 
 
@@ -30,7 +30,7 @@ type Msg
     = ConfigNameChange String
     | SelectParameter MachineParameter
     | UnselectParameter
-    | ParameterChange MachineParameter String
+    | ParameterChange String
     | ParameterConfirm MachineParameter Int
 
 
@@ -42,23 +42,13 @@ update msg ({ config, context } as model) =
             { model | config = changeName name config }
 
         SelectParameter par ->
-            { model | selected = Just ( par, par.get config.parmac |> par.format config.parmac context ) }
+            { model | selected = Just ( par, AppWidgets.parameterModificationData config.parmac config.parmac context par ) }
 
         UnselectParameter ->
             { model | selected = Nothing }
 
-        ParameterChange par text ->
-            case par.ui of
-                Parameter.Number ->
-                    case Parameter.validateEditString text of
-                        Just validated ->
-                            { model | selected = Just ( par, validated ) }
-
-                        Nothing ->
-                            model
-
-                Parameter.Option ->
-                    { model | selected = Just ( par, text ) }
+        ParameterChange text ->
+            { model | selected = Maybe.map (\( par, data ) -> ( par, AppWidgets.validateParameterInput text data )) model.selected }
 
         ParameterConfirm par value ->
             { model | config = { config | parmac = par.set value config.parmac }, selected = Nothing }
@@ -76,13 +66,16 @@ view model =
                 (\( p, t ) ->
                     [ { onDismiss = Just UnselectParameter
                       , content =
-                            AppWidgets.parameterModificationDialog model.config.parmac
-                                model.context
-                                ParameterChange
-                                UnselectParameter
-                                ParameterConfirm
-                                t
-                                p
+                            AppWidgets.parameterModificationDialog
+                                { b = model.config.parmac
+                                , context = model.context
+                                , textChange = ParameterChange
+                                , dismiss = UnselectParameter
+                                , confirm = ParameterConfirm
+                                , modData = t
+                                , par = p
+                                , priceMultiplier = model.config.parmac.priceDecimalDigits
+                                }
                       }
                     ]
                 )
@@ -96,7 +89,7 @@ view model =
             [ Ui.paragraph [ Font.size 32 ] [ Ui.text (translate Intl.ParametriMacchina model.context) ]
             , Input.text [] { onChange = ConfigNameChange, text = model.config.parmac.name, placeholder = Nothing, label = Input.labelHidden "name" }
             , model.config.parmacMetadata
-                |> List.map
+                |> List.indexedMap
                     (AppWidgets.parameter model.context model.config.parmac model.config.parmac SelectParameter)
                 |> List.map Widget.asItem
                 |> Widget.itemList (Material.cardColumn Style.palette)

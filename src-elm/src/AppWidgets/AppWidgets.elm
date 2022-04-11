@@ -20,6 +20,7 @@ import Framework.Card as Card
 import Html
 import Html.Attributes as Attributes
 import Html.Events
+import Round
 import Widget as Widget
 import Widget.Icon as Icon
 import Widget.Material as Material
@@ -39,8 +40,12 @@ type alias DrawerConfig msg =
     }
 
 
-parameter : Context -> a -> b -> (Parameter a b -> msg) -> Parameter a b -> Ui.Element msg
-parameter context db parmac msg par =
+
+-- PARAMETER VIEW
+
+
+parameter : Context -> a -> b -> (Parameter a b -> msg) -> Int -> Parameter a b -> Ui.Element msg
+parameter context db parmac msg _ par =
     Ui.column [ Ui.width Ui.fill, Ui.spacing 8 ]
         [ Ui.row
             [ Ui.width Ui.fill
@@ -51,7 +56,7 @@ parameter context db parmac msg par =
             , Ui.mouseOver [ Background.color <| Ui.rgb 0.9 0.9 0.9 ]
             , Background.color <| Ui.rgb 1 1 1
             ]
-            [ translate par.description context
+            [ ("   " ++ translate par.description context)
                 |> Ui.text
                 |> Ui.el [ Ui.alignLeft ]
             , par.format parmac context (par.get db)
@@ -62,20 +67,96 @@ parameter context db parmac msg par =
         ]
 
 
-parameterModificationDialog : b -> Context -> (Parameter a b -> String -> msg) -> msg -> (Parameter a b -> Int -> msg) -> String -> Parameter a b -> Ui.Element msg
-parameterModificationDialog b context textChange dismiss confirm text par =
+type ParameterModificationData
+    = NumberParameter String
+    | OptionParameter String
+    | PriceParameter String
+
+
+parameterModificationData : a -> b -> Context -> Parameter a b -> ParameterModificationData
+parameterModificationData db b context ({ ui, get, format } as par) =
+    case ui of
+        Parameter.Number ->
+            NumberParameter (String.fromInt <| get db)
+
+        Parameter.Option ->
+            OptionParameter (Parameter.indexToOption b context par <| get db)
+
+        Parameter.Price ->
+            PriceParameter (format b context <| get db)
+
+
+parameterModificationValue : Parameter a b -> b -> Context -> ParameterModificationData -> Int -> Maybe Int
+parameterModificationValue par b context data priceMultiplier =
+    case data of
+        NumberParameter string ->
+            String.toInt string
+
+        OptionParameter string ->
+            Parameter.optionToIndex b context par string
+
+        PriceParameter string ->
+            String.toFloat string |> Maybe.map ((*) (toFloat (10 ^ priceMultiplier)) >> round)
+
+
+validateParameterInput : String -> ParameterModificationData -> ParameterModificationData
+validateParameterInput text data =
+    let
+        validateEditString : String -> Maybe String
+        validateEditString string =
+            case string of
+                "" ->
+                    Just ""
+
+                value ->
+                    String.toInt value
+                        |> Maybe.map (\_ -> value)
+    in
+    case data of
+        NumberParameter _ ->
+            validateEditString text
+                |> Maybe.map NumberParameter
+                |> Maybe.withDefault data
+
+        OptionParameter _ ->
+            OptionParameter text
+
+        PriceParameter _ ->
+            String.toFloat text
+                |> Maybe.map (always (PriceParameter text))
+                |> Maybe.withDefault data
+
+
+parameterModificationDialog :
+    { b : b
+    , context : Context
+    , textChange : String -> msg
+    , dismiss : msg
+    , confirm : Parameter a b -> Int -> msg
+    , modData : ParameterModificationData
+    , par : Parameter a b
+    , priceMultiplier : Int
+    }
+    -> Ui.Element msg
+parameterModificationDialog { b, context, textChange, dismiss, confirm, modData, par, priceMultiplier } =
     let
         validationResult =
-            Parameter.validate text par
+            parameterModificationValue par b context modData priceMultiplier
+                |> Maybe.map (Parameter.validate par)
+                |> Maybe.withDefault (Err Intl.ValoreNonNumerico)
 
         input =
-            case par.ui of
-                Parameter.Number ->
+            let
+                textInput text =
                     Input.text
                         [ Ui.width Ui.fill ]
-                        { onChange = textChange par, text = text, placeholder = Nothing, label = Input.labelLeft [] (Ui.text (translate Intl.Valore context)) }
+                        { onChange = textChange, text = text, placeholder = Nothing, label = Input.labelLeft [] (Ui.text (translate Intl.Valore context)) }
+            in
+            case modData of
+                NumberParameter text ->
+                    textInput text
 
-                Parameter.Option ->
+                OptionParameter text ->
                     Ui.el [ Ui.alignRight ]
                         (List.map
                             (\opt ->
@@ -84,9 +165,12 @@ parameterModificationDialog b context textChange dismiss confirm text par =
                                     [ Html.text opt ]
                             )
                             (Parameter.options b context par)
-                            |> Html.select [ Attributes.style "font-size" "inherit", Html.Events.onInput (textChange par) ]
+                            |> Html.select [ Attributes.style "font-size" "inherit", Html.Events.onInput textChange ]
                             |> Ui.html
                         )
+
+                PriceParameter text ->
+                    textInput text
     in
     Ui.column (Style.modal 400)
         [ Ui.paragraph [ Ui.width Ui.fill ]
@@ -94,7 +178,7 @@ parameterModificationDialog b context textChange dismiss confirm text par =
         , input
         , Ui.paragraph [ Ui.width Ui.fill, Font.color (Ui.rgb 1 0.1 0.1), Ui.height <| Ui.px 48 ]
             [ case validationResult of
-                Ok () ->
+                Ok _ ->
                     Ui.none
 
                 Err error ->
@@ -104,10 +188,26 @@ parameterModificationDialog b context textChange dismiss confirm text par =
             [ textButton (translate Intl.Cancella context) (Just dismiss)
             , textButton
                 (translate Intl.Conferma context)
-                (validationResult |> Result.toMaybe |> Maybe.map (\_ -> confirm par <| Parameter.fromString b context par text))
+                (validationResult |> Result.toMaybe |> Maybe.map (confirm par))
                 |> Ui.el [ Ui.alignRight ]
             ]
         ]
+
+
+step : Context -> WMC.MachineParameters -> (Int -> Bool -> msg) -> (Int -> WMC.WashParameter -> msg) -> Bool -> Int -> WashingStep -> Ui.Element msg
+step context parmac toggle selected expanded index s =
+    Widget.expansionItem (Material.expansionItem Style.palette)
+        { onToggle = toggle index
+        , isExpanded = expanded
+        , icon = always Ui.none
+        , text = String.fromInt (index + 1) ++ " - " ++ WMC.washStepTypeToString context s.stepType
+        , content =
+            WMC.stepParameterMetadataList s.stepType parmac
+                |> List.indexedMap
+                    (parameter context s parmac (selected index))
+                |> List.map Widget.asItem
+        }
+        |> Widget.itemList (Material.cardColumn Style.palette)
 
 
 languageSelect : Context -> (String -> msg) -> Ui.Element msg
@@ -188,15 +288,6 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-homeButton : Context -> msg -> Ui.Element msg
-homeButton context msg =
-    Widget.iconButton (Material.iconButton Style.palette)
-        { text = translate Intl.Indietro context
-        , icon = SolidIcons.home |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
-        , onPress = Just msg
-        }
-
-
 ipDialog : Context -> IpAddress -> (Int -> Int -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
 ipDialog context ip msg submit =
     let
@@ -236,6 +327,39 @@ ipDialog context ip msg submit =
     }
         |> List.singleton
         |> Widget.singleModal
+
+
+washTypeImage : Int -> Ui.Element msg
+washTypeImage washType =
+    [ "molto_sporchi_con_prelavaggio_inox"
+    , "sporchi_con_prelavaggio_inox"
+    , "molto_sporchi_inox"
+    , "sporchi_inox"
+    , "colorati_inox"
+    , "sintetici_inox"
+    , "piumoni_inox"
+    , "freddo_inox"
+    , "lana_inox"
+    , "fibre_naturali_inox"
+    , "solo_centrifuga_inox"
+    , "igienizza_cesto_inox"
+    , "ammollo_inox"
+    , "prelavaggio_centrifuga_inox"
+    , "risciacquo_centrifuga_inox"
+    ]
+        |> List.map (\s -> "images/" ++ s ++ ".png")
+        |> Array.fromList
+        |> Array.get washType
+        |> Maybe.withDefault ""
+        |> (\src ->
+                Ui.image
+                    [ Ui.alignRight, Ui.width <| Ui.px 160 ]
+                    { src = src, description = "Wash type" }
+           )
+
+
+
+-- GENERIC WIDGETS
 
 
 scrollbarYEl : List (Ui.Attribute msg) -> Ui.Element msg -> Ui.Element msg
@@ -282,35 +406,6 @@ stringChoice select options selected =
             }
 
 
-washTypeImage : Int -> Ui.Element msg
-washTypeImage washType =
-    [ "molto_sporchi_con_prelavaggio_inox"
-    , "sporchi_con_prelavaggio_inox"
-    , "molto_sporchi_inox"
-    , "sporchi_inox"
-    , "colorati_inox"
-    , "sintetici_inox"
-    , "piumoni_inox"
-    , "freddo_inox"
-    , "lana_inox"
-    , "fibre_naturali_inox"
-    , "solo_centrifuga_inox"
-    , "igienizza_cesto_inox"
-    , "ammollo_inox"
-    , "prelavaggio_centrifuga_inox"
-    , "risciacquo_centrifuga_inox"
-    ]
-        |> List.map (\s -> "images/" ++ s ++ ".png")
-        |> Array.fromList
-        |> Array.get washType
-        |> Maybe.withDefault ""
-        |> (\src ->
-                Ui.image
-                    [ Ui.alignRight, Ui.width <| Ui.px 160 ]
-                    { src = src, description = "Wash type" }
-           )
-
-
 iconButton : FAIcon.Icon -> msg -> String -> Ui.Element msg
 iconButton icon msg text =
     Widget.iconButton
@@ -321,17 +416,10 @@ iconButton icon msg text =
         }
 
 
-step : Context -> WMC.MachineParameters -> (Int -> Bool -> msg) -> (Int -> WMC.WashParameter -> msg) -> Bool -> Int -> WashingStep -> Ui.Element msg
-step context parmac toggle selected expanded index s =
-    Widget.expansionItem (Material.expansionItem Style.palette)
-        { onToggle = toggle index
-        , isExpanded = expanded
-        , icon = always Ui.none
-        , text = String.fromInt (index + 1) ++ " - " ++ WMC.washStepTypeToString context s.stepType
-        , content =
-            WMC.stepParameterMetadataList s.stepType
-                |> List.map
-                    (parameter context s parmac (selected index))
-                |> List.map Widget.asItem
+homeButton : Context -> msg -> Ui.Element msg
+homeButton context msg =
+    Widget.iconButton (Material.iconButton Style.palette)
+        { text = translate Intl.Indietro context
+        , icon = SolidIcons.home |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
+        , onPress = Just msg
         }
-        |> Widget.itemList (Material.cardColumn Style.palette)

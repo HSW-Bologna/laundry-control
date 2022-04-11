@@ -37,7 +37,7 @@ type alias Model =
     , newStepDialog : Maybe StepMetadata
     , removeStepDialog : Maybe Int
     , expandedSteps : Array Bool
-    , selected : Maybe ( Int, WMC.WashParameter, String )
+    , selected : Maybe ( Int, WMC.WashParameter, AppWidgets.ParameterModificationData )
     }
 
 
@@ -88,7 +88,7 @@ type Msg
     | ExpandStep Int Bool
     | SelectParameter Int WMC.WashParameter
     | UnselectParameter
-    | ParameterChange Int WMC.WashParameter String
+    | ParameterChange String
     | ParameterConfirm Int WMC.WashParameter Int
     | NewStep Int WMC.WashingStep
 
@@ -108,7 +108,11 @@ update msg ({ cycle, index, parmac, context } as model) =
     in
     case msg of
         SelectParameter stepIndex par ->
-            ( Maybe.map (\step -> { model | selected = Just ( stepIndex, par, par.get step |> par.format parmac context ) }) (Array.get stepIndex model.cycle.steps)
+            let
+                washingStep =
+                    Array.get stepIndex model.cycle.steps
+            in
+            ( Maybe.map (\step -> { model | selected = Just ( stepIndex, par, AppWidgets.parameterModificationData step parmac context par ) }) washingStep
                 |> Maybe.withDefault model
             , None
             )
@@ -116,16 +120,8 @@ update msg ({ cycle, index, parmac, context } as model) =
         UnselectParameter ->
             ( { model | selected = Nothing }, None )
 
-        ParameterChange stepIndex par text ->
-            ( case par.ui of
-                Parameter.Number ->
-                    Maybe.map (\validated -> { model | selected = Just ( stepIndex, par, validated ) }) (Parameter.validateEditString text)
-                        |> Maybe.withDefault model
-
-                Parameter.Option ->
-                    { model | selected = Just ( stepIndex, par, text ) }
-            , None
-            )
+        ParameterChange text ->
+            ( { model | selected = Maybe.map (\( si, par, data ) -> ( si, par, AppWidgets.validateParameterInput text data )) model.selected }, None )
 
         ParameterConfirm stepIndex par value ->
             ( { model | cycle = { cycle | steps = Array.update stepIndex (\s -> par.set value s) cycle.steps }, selected = Nothing }
@@ -301,7 +297,7 @@ newStepModal context metadata numSteps =
                 AppWidgets.textButton (translate Intl.Cancella context)
                     (Just Dismiss)
             , Ui.el [ Ui.alignRight ] <|
-                AppWidgets.textButton (translate Intl.Conferma context) (Just (NewStep metadata.index (WMC.defaultWashStep metadata.stepType)))
+                AppWidgets.textButton (translate Intl.Conferma context) (Just (NewStep metadata.index (WMC.defaultWashStep metadata.stepType metadata.energetic)))
             ]
         ]
 
@@ -349,13 +345,16 @@ view { index, cycle, parmac, context, priceString, removeDialog, removeStepDialo
                         (\( i, p, t ) ->
                             [ { onDismiss = Just UnselectParameter
                               , content =
-                                    AppWidgets.parameterModificationDialog parmac
-                                        context
-                                        (ParameterChange i)
-                                        UnselectParameter
-                                        (ParameterConfirm i)
-                                        t
-                                        p
+                                    AppWidgets.parameterModificationDialog
+                                        { b = parmac
+                                        , context = context
+                                        , textChange = ParameterChange
+                                        , dismiss = UnselectParameter
+                                        , confirm = ParameterConfirm i
+                                        , modData = t
+                                        , par = p
+                                        , priceMultiplier = parmac.priceDecimalDigits
+                                        }
                               }
                             ]
                         )

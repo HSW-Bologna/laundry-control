@@ -22,11 +22,10 @@ import Json.Encode as Encode
 import Pages.WashingMachineTabs.MachineConfiguration as ParMacTab
 import Pages.WashingMachineTabs.RemoteControl as RemControlTab
 import Pages.WashingMachineTabs.WashingCycle as WashCycleTab
-import Ports exposing (eventDecoder, navigateHome)
+import Ports exposing (decodeEvent, eventDecoder, navigateHome)
 import Task
 import Time
 import Widget as Widget
-import Widget.Icon as Icon
 import Widget.Material as Material
 import Widget.Snackbar as Snackbar
 
@@ -205,10 +204,7 @@ update msg model =
             ( { model | snackbar = model.snackbar |> Snackbar.timePassed int }, Cmd.none )
 
         ( StateUpdate state, _ ) ->
-            case
-                Decode.decodeValue (eventDecoder "stateUpdate") state
-                    |> Result.andThen (Decode.decodeValue WSS.connectionStateUpdateDecoder)
-            of
+            case decodeEvent "stateUpdate" WSS.connectionStateUpdateDecoder state of
                 Ok res ->
                     ( model |> fillTabWithConnection res, Cmd.none )
 
@@ -445,20 +441,20 @@ view model =
                     WashCycleTab.view tabModel |> Ui.map WashCyclesMsg
 
                 Nothing ->
-                    Ui.none
+                    Ui.el [ Ui.centerX, Ui.centerY ] menuOptions
+
+        menuOptions =
+            AppWidgets.rightMenu model.context
+                [ ( Intl.CaricaConfigurazione, Just LoadMachineFromLocal )
+                , ( Intl.SalvaConfigurazione, Maybe.map (always SaveMachineConfig) model.config )
+                , ( Intl.NuovaConfigurazione, Just CreateNewMachineConfig )
+                , ( Intl.ConnessioneLocale, Just InsertIpAddress )
+                , ( Intl.ConnessioneRemota, Nothing )
+                ]
 
         rightMenuAddition =
             if model.rightMenuVisible then
-                [ Ui.below
-                    (AppWidgets.rightMenu model.context
-                        [ ( Intl.CaricaConfigurazione, Just LoadMachineFromLocal )
-                        , ( Intl.SalvaConfigurazione, Maybe.map (always SaveMachineConfig) model.config )
-                        , ( Intl.NuovaConfigurazione, Just CreateNewMachineConfig )
-                        , ( Intl.ConnessioneLocale, Just InsertIpAddress )
-                        , ( Intl.ConnessioneRemota, Nothing )
-                        ]
-                    )
-                ]
+                [ Ui.below menuOptions ]
 
             else
                 []

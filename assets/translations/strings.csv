@@ -118,3 +118,74 @@ PagamentoCassa, Pagamento cassa, Pay at the desk
 PagamentoImporto, Pagamento importo, Pay the required amount
 NuovoPasso, Nuovo passo, New step
 Posizione, Posizione, Position
+TempoDiMotoInRiempimento, Tempo di moto in riempimento, Rotation time while filling
+TempoDiPausaInRiempimento, Tempo di pausa in riempimento, Pause time while filling
+VelocitaInLavaggio, Velocita' in lavaggio, Speed during wash
+InversioneInLavaggio, Inversione in lavaggio, Inversion during wash
+TempoDiMotoAlLavoro, Tempo di moto al lavoro, Rotation time while working
+TempoDiPausaAlLavoro, Tempo di pausa al lavoro, Pause time while working
+Temperatura, Temperatura, Temperature
+Riscaldamento, Riscaldamento, Heating
+TipoDiRiscaldamento, Tipo di riscaldamento, Heating type
+Diretto, Diretto, Direct
+Indiretto, Indiretto, Indirect
+ControlloDellaTemperaturaContinuo, Controllo della temperatura continuo, Continuous temperature control
+Livello, Livello, level
+Ricircolo, Ricircolo, Recycling
+AcquaFredda, Acqua fredda, Cold water
+AcquaCalda, Acqua calda, Warm water
+AcquaDepurata, Acqua depurata, Purified water
+TempoAttivoSapone, Tempo attivo sapone, Detergent active time
+TempoSapone1, Tempo sapone 1, Detergent 1 time
+RitardoSapone1, Ritardo sapone 1, Detergent 1 delay
+TempoSapone2, Tempo sapone 2, Detergent 2 time
+RitardoSapone2, Ritardo sapone 2, Detergent 2 delay
+TempoSapone3, Tempo sapone 3, Detergent 3 time
+RitardoSapone3, Ritardo sapone 3, Detergent 3 delay
+TempoSapone4, Tempo sapone 4, Detergent 4 time
+RitardoSapone4, Ritardo sapone 4, Detergent 4 delay
+TempoSapone5, Tempo sapone 5, Detergent 5 time
+RitardoSapone5, Ritardo sapone 5, Detergent 5 delay
+TempoSapone6, Tempo sapone 6, Detergent 6 time
+RitardoSapone6, Ritardo sapone 6, Detergent 6 delay
+TempoSapone7, Tempo sapone 7, Detergent 7 time
+RitardoSapone7, Ritardo sapone 7, Detergent 7 delay
+TempoSapone8, Tempo sapone 8, Detergent 8 time
+RitardoSapone8, Ritardo sapone 8, Detergent 8 delay
+TempoSapone9, Tempo sapone 9, Detergent 9 time
+RitardoSapone9, Ritardo sapone 9, Detergent 9 delay
+TempoSapone10, Tempo sapone 10, Detergent 10 time
+RitardoSapone10, Ritardo sapone 10, Detergent 10 delay
+MotoCesto, Moto cesto, Basket motion
+Recupero, Recupero, Recovery
+TempoDiPreparazione, Tempo di preparazione, Preparation Time
+TempoDiScarico, Tempo di scarico, Drain time
+VelocitaDellaCentrifuga1, Velocita' della centrifuga 1, Centrifuge 1 speed
+TempoDellaRampa1, Tempo della rampa 1, Ramp 1 time
+TempoDiAttesaDellaCentrifuga1, Tempo di attesa della centrifuga 1, Centrifuge 1 wait time
+VelocitaDellaCentrifuga2, Velocita' della centrifuga 2, Centrifuge 2 speed
+TempoDellaRampa2, Tempo della rampa 2, Ramp 2 time
+TempoDiAttesaDellaCentrifuga2, Tempo di attesa della centrifuga 2, Centrifuge 2 wait time
+VelocitaDellaCentrifuga3, Velocita' della centrifuga 3, Centrifuge 3 speed
+TempoDellaRampa3, Tempo della rampa 3, Ramp 3 time
+TempoDiFrenata, Tempo di frenata, Brake time
+VelocitaDiPreparazione, Velocita' di preparazione, Preparation speed
+TempoDiAttesa, Tempo di attesa, Wait time
+NumeroDiRampe, Numero di rampe, Ramp count
+SbloccoGettoniera, Sblocco gettoniera, Coin acceptor unlocking
+TempoDiAccettazioneDelTastoPausa, Tempo di accettazione del tasto pausa, Seconds of press delay for the pause button
+TempoDiAccettazioneDelTastoStop, Tempo di accettazione del tasto stop, Seconds of press delay for the stop button
+TempoDiAllarmeNoRiempimento, Tempo di allarme "no riempimento", "No fillup" alarm time
+TempoDiAllarmeNoRiscaldamento, Tempo di allarme "no riscaldamento, "No heating" alarm time
+TempoDiAllarmeNoScarico, Tempo di allarme "no scarico", "No drain" alarm time
+TempoDiAttesaDelMicroDelChiavistello, Tempo di attesa del micro del chiavistello, Porthole micro switch delay time
+TempoDiPrecarica, Tempo di precarica, Preload time
+TempoPuliziaSaponi, Tempo di pulizia saponi, Detergents cleaning time
+TempoTastoDiRabboccoSaponi, Tempo tasto di rabbocco saponi, Detergent erogation button time
+TempoDiScaricoServizio, Tempo di scarico servizio, Service drain time
+TempoDellImpulsoDiAperturaDelloScarico, Tempo dell'impulso di apertura dello scarico, Drain opening pulse time
+TempoMinimoDiScarico, Tempo minimo di scarico, Minimum drain time
+TempoMinimoDiFrenata, Tempo minimo di frenata, Minimum brake time
+DiametroDelCesto, Diametro del cesto, Basket diameter
+ProfonditaDelCesto, Profondita' del cesto, Basket depth
+AltezzaTrappola, Altezza trappola, Trap height

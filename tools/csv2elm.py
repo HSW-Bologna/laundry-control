@@ -110,7 +110,8 @@ def main(indir, outdir):
 
                     translate_fun += f"        {cap(enum)} ->\n            getTranslation language <| Translation"
                     for translation in value[enum]:
-                        translate_fun += f" \"{translation}\""
+                        escaped = translation.replace("\"", "\\\"")
+                        translate_fun += f" \"{escaped}\""
                     translate_fun += "\n\n"
 
                 elm.write(intl_string_type)

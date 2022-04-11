@@ -1,4 +1,4 @@
-module Pages.PageSelection exposing (..)
+port module Pages.PageSelection exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (Language, languageFromString, languageString)
 import AppWidgets.AppWidgets exposing (languageSelect)
@@ -11,9 +11,8 @@ import Element.Font as Font
 import Element.Input as UiIn
 import Html exposing (Html)
 import Json.Decode as Decode
-import Ports exposing (navigateToPage)
-import Widget as Widget
-import Widget.Material as Material
+import Json.Encode as Encode
+import Ports exposing (decodeEvent, navigateToPage, preferences)
 
 
 
@@ -49,16 +48,33 @@ init language =
 type Msg
     = PickMachine String
     | ChangeLanguage String
+    | SavedPreferences Encode.Value
+
+
+port savedPreferences : (Encode.Value -> msg) -> Sub msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        SavedPreferences value ->
+            case decodeEvent "savedPreferences" preferencesDecoder value of
+                Ok { language, machine } ->
+                    ( model, navigateToPage machine (languageFromString language) )
+
+                _ ->
+                    ( model, Cmd.none )
+
         PickMachine machine ->
-            ( model, navigateToPage machine model.context.language )
+            ( model, Cmd.batch [ preferences { machine = machine, language = languageString model.context.language }, navigateToPage machine model.context.language ] )
 
         ChangeLanguage language ->
             ( { model | context = changeLanguage (languageFromString language) model.context }, Cmd.none )
+
+
+preferencesDecoder : Decode.Decoder { language : String, machine : String }
+preferencesDecoder =
+    Decode.map2 (\l m -> { language = l, machine = m }) (Decode.field "language" Decode.string) (Decode.field "machine" Decode.string)
 
 
 
@@ -67,7 +83,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    savedPreferences SavedPreferences
 
 
 

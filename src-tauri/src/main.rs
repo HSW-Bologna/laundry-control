@@ -4,12 +4,11 @@
 )]
 use std::thread;
 use tauri::{AppHandle, Window};
-
 mod controller;
 
 #[tauri::command]
 fn init_tasks(_app: AppHandle, window: Window) -> Result<(), String> {
-  thread::spawn(move || controller::task(window));
+  thread::spawn(move || controller::backend::task(window));
   Ok(())
 }
 
