@@ -57,15 +57,27 @@ buildModel context index cycle parmac =
     Model context index cycle parmac price False Nothing Nothing Array.empty Nothing
 
 
-validatePrice : MachineParameters -> String -> Maybe String
-validatePrice parmac string =
+validatePriceString : MachineParameters -> String -> Maybe String
+validatePriceString { priceDecimalDigits } string =
     case string of
         "" ->
             Just ""
 
         value ->
             String.toFloat value
-                |> Maybe.map (Round.round parmac.priceDecimalDigits)
+                |> Maybe.map (Round.round priceDecimalDigits)
+
+
+validatePrice : MachineParameters -> String -> Maybe Int
+validatePrice { priceDecimalDigits } string =
+    case string of
+        "" ->
+            Nothing
+
+        value ->
+            String.toFloat value
+                |> Maybe.map ((*) (toFloat priceDecimalDigits))
+                |> Maybe.map round
 
 
 type Msg
@@ -136,7 +148,14 @@ update msg ({ cycle, index, parmac, context } as model) =
             ( { model | cycle = { cycle | washType = selected } }, None )
 
         PriceChange string ->
-            ( { model | priceString = validatePrice model.parmac string |> Maybe.withDefault model.priceString }, None )
+            let
+                newPriceString =
+                    validatePriceString model.parmac string |> Maybe.withDefault model.priceString
+
+                priceInt =
+                    validatePrice model.parmac string |> Maybe.withDefault cycle.price
+            in
+            ( { model | priceString = newPriceString, cycle = { cycle | price = priceInt } }, None )
 
         TabMoveUp ->
             ( model, MoveUp index )

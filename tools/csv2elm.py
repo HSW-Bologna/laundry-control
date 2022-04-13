@@ -99,7 +99,7 @@ def main(indir, outdir):
                 for enum in value.keys():
                     if len(value[enum]) != lingue:
                         print(
-                            f"Numero di lingue diverso nel file {filename}.csv: {lingue} vs {len(value[enum])}")
+                            f"Numero di lingue diverso nel file {filename}.csv: {lingue} vs {len(value[enum])} ({value[enum]})")
                         exit(1)
 
                     if first:

@@ -189,3 +189,116 @@ TempoMinimoDiFrenata, Tempo minimo di frenata, Minimum brake time
 DiametroDelCesto, Diametro del cesto, Basket diameter
 ProfonditaDelCesto, Profondita' del cesto, Basket depth
 AltezzaTrappola, Altezza trappola, Trap height
+EspansioneIO, Espansione I/O, I/O expansion
+NumeroSaponiUtilizzabili, Numero di saponi utilizzabili, Available detergents count
+EsclusioneSapone, Esclusione sapone, Detergent exclusion
+AbilitazioneMacchinaLiberaETipo, Abilitazione macchina libera e tipo, Type and availability of busy signal
+ContattoMacchinaLibera, Contatto macchina libera, Busy signal
+TipologiaDellIngressoAusiliario1, Tipologia dell'ingresso ausiliario 1, Type of auxiliary input 1
+TipologiaDellUscitaAusiliaria2, Tipologia dell'uscita ausiliaria 2, Type of auxiliary output 2
+TipologiaDellUscitaAusiliaria3, Tipologia dell'uscita ausiliaria 3, Type of auxiliary output 3
+TipologiaDellUscitaAusiliaria4, Tipologia dell'uscita ausiliaria 4, Type of auxiliary output 4
+ValvolaDiScaricoRecupero, Valvola di scarico recupero, Drain recycling valve
+NonGestita, Non gestita, Not managed
+CommutaAlloStart, Commuta alla partenza, Commute on start
+CommutaAlPagamento, Commuta al pagamento, Commute on payment
+SbloccoPagamento, Sblocco pagamento, Payment unlock
+StandbySaponi, Standby saponi, Detergent standby
+MacchinaOccupata, Macchina occupata, Machine busy 
+Lampeggiante, Lampeggiante, Flash
+H2ORecuperoDepurata, H2O recupero depurata, Purified H2O recycling
+PompaRicircolo, Pompa ricircolo, Recycling pump
+ScaricoRecupero, Scarico recupero, Drain recovery
+RiscaldamentoIndiretto, Riscaldamento indiretto, Indirect heating
+NormalmenteChiuso, Normalmente chiuso, Normally close
+NormalmenteAperto, Normalmente aperto, Normally open
+Ferma, Ferma, Stop
+Esegui, Esegui, Run
+PercentualeLivelloConCaricoRidotto, Percentuale livello con carico ridotto, Level percentage with reduced load
+PercentualeSaponeConCaricoRidotto, Percentuale sapone con carico ridotto, Detergent percentage with reduced load
+Autoavvio, Autoavvio, Autostart
+SensoreDiProssimita, Sensore di prossimita', Proximity sensor
+NumeroDiRaggi, Numero di raggi, Beams
+FattoreDiCorrezioneAlContagiri, Fattore di correzione al contagiri, Revolution counter correction factor
+Accelerometro, Accelerometro, Accelerometer
+Velocita1, Una velocita', One speed
+Velocita2SoglieDelta, "Due velocita', soglie delta", "Two speeds, delta threshold"
+Velocita3SoglieHi, "Tre veolcita', soglie Hi", "Three speeds, Hi threshold"
+ScalaAccelerometro, Scala accelerometro, Accelerometer scale
+SogliaXAccelerometro, Soglia X accelerometro, Accelerometer X threshold
+SogliaYAccelerometro, Soglia Y accelerometro, Accelerometer Y threshold
+SogliaZAccelerometro, Soglia Z accelerometro, Accelerometer Z threshold
+SogliaXAccelerometroH, Soglia X accelerometro (H), Accelerometer X threshold (H)
+SogliaYAccelerometroH, Soglia Y accelerometro (H), Accelerometer Y threshold (H)
+SogliaZAccelerometroH, Soglia Z accelerometro (H), Accelerometer Z threshold (H)
+GiriAccelerometro, Giri accelerometro, Accelerometer revolutions
+GiriAccelerometro2, Giri accelerometro (2), Accelerometer revolutions (2)
+DeltaAccelerometro, Delta accelerometro, Accelerometer delta
+TempoDiAttesaDellAccelerometro, Tempo di attesa dell'accelerometro, Accelerometer wait time
+TempoDiScaricoDellAccelerometro, Tempo di scarico dell'accelerometro, Accelerometer drain time
+TemperaturaMassima, Temperatura massima, Maximum temperature
+IsteresiDellaTemperatura, Isteresi della temperatura, Temperature hysteresis
+TemperaturaDiSicurezza, Temperatura di sicurezza, Safety temperature
+TemperaturaDiTermodegradazione, Temperatura di termodegradazione, Thermal degradation temperature
+TipoLivello, Tipo di lettura del livello, Level reading type
+TempoDiIsteresiLivello, Tempo di isteresi livello, Level hysteresis time
+CentimetriLivelloMassimo, Livello massimo (centimetri), Max level (centimeters)
+LivelloDiSfioro, Livello di sfioro, Surface level
+LivelloMinimoScarico, Livello minimo di scarico, Drain minimum time
+LivelloMinimoRiscaldamento, Livello minimo di riscaldamento, Minimum heating level
+LitriMassimiDiRiempimento, Litri massimi di riempimento, Maximum fill liters
+LitriMinimiInRiscaldamento, Litri minimi in riscaldamento, Heating minimum liters
+ImpulsiPerLitro, Impulsi per litro, Pulses per liter
+ModelloDiInverter, Modello di inverter, Inverter model
+VelocitaDiServizio, Velocita' di servizio, Service speed
+VelocitaMinimaDiLavaggio, Velocita' minima di lavaggio, Minimum wash speed
+VelocitaMassimaDiLavaggio, Velocita' massima di lavaggio, Maximum wash speed
+NumeroDiCicliDiPreparazione, Numero di cicli di preparazione, Number of preparation cycles
+TempoDiMarciaInPreparazione, Tempo di marcia in preparazione, Rotation time during preparation
+TempoDiSostaInPreparazione, Tempo di sosta in preparazione, Pause time in preparation
+Centimetri, Centimetri, Centimeters
+UnContalitri, Un contalitri, One liter counter
+DueContalitri, Due contalitri, Two liter counter
+AvantiIndietro, Avanti/indietro, Forward/backward
+MarciaDirezione, Marcia/direzione, Run/direction
+VelocitaMinimaDiPreparazione, Velocita' minima di preparazione, Minimum preparation speed
+VelocitaMassimaDiPreparazione, Velocita' massima di preparazione, Maximum preparation speed
+VelocitaMinimaDellaCentrifuga1, Velocita' minima della centrifuga 1, Minimum centrifuge 1 speed
+VelocitaMassimaDellaCentrifuga1, Velocita' massima della centrifuga 1, Maximum centrifuge 1 speed
+VelocitaMinimaDellaCentrifuga2, Velocita' minima della centrifuga 2, Minimum centrifuge 2 speed
+VelocitaMassimaDellaCentrifuga2, Velocita' massima della centrifuga 2, Maximum centrifuge 2 speed
+VelocitaMinimaDellaCentrifuga3, Velocita' minima della centrifuga 3, Minimum centrifuge 3 speed
+VelocitaMassimaDellaCentrifuga3, Velocita' massima della centrifuga 3, Maximum centrifuge 3 speed
+TempoMinimoDellaRampa, Tempo minimo della rampa, Minimum ramp time
+TempoMassimoDellaRampa, Tempo massimo della rampa, Maximum ramp time
+NumeroMassimoDiSbilanciamenti, Numero massimo di sbilanciamenti, Maximum number of allowed lurches
+AbilitazioneDelCambioMinutiSecondi, Abilitazione del cambio minuti/secondi, Minute/second modification enable
+TipoDiSerratura, Tipo di serratura, Lock type
+DurataDellImpulsoDellaSerratura, Durata dell'impulso della serratura, Lock pulse duration
+InibizioneAllarmi, Inibizione degli allarmi, Alarm inhibition
+CicloContinuo, Ciclo continuo, Continous cycle
+VisualizzazioneDataEOra, Visualizzazione data e ora, Show date and time
+VisualizzazionePedante, Visualizzazione pedante, Pedantic messages
+VisualizzazioneEsclusioneSapone, Visualizzazione esclusione sapone, Show detergent exclusion
+ColoreLEDDaFermo, Colore LED da fermo, LED color while stopped
+ColoreLEDAlLavoro, Colore LED al lavoro, LED color while working
+ColoreLEDInPausa, Colore LED in pausa, LED color while in pause
+ColoreLEDInAttesa, Colore LED in attesa, LED color while waiting
+ColoreLEDConAvviso, Colore LED con avviso, LED color with warning
+ColoreLEDConAllarme, Colore LED con allarme, LED color with alarm
+NuovaTreMicroLivello, Nuova/tre micro/livello, New/three micros/level
+BobinaUnMicroLivello, Bobina/un micro/livello, Coil/one micro/level
+NuovaTreMicroNoLivello, Nuova/tre micro/no livello, New/three micros/no level
+BobinaUnMicroNoLivello, Bobina/un micro/no livello, Coil/one micro/no level
+Spento, Spento, Off
+Blu, Blu, Blue
+Verde, Verde, Green
+Azzurro, Azzuro, Cyan
+Rosso, Rosso, Red
+Viola, Viola, Purple
+Giallo, Giallo, Yellow
+Bianco, Bianco, White
+Utente, Utente, User
+Tecnico, Tecnico, Maintainer
+Distributore, Distributore, Distributor
+Costruttore, Costruttore, Manufacturer

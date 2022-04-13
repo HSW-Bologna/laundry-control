@@ -48,6 +48,7 @@
                             .catch(() => console.log("Event discarded by Rust"));
                     });
                 } else if (app.ports[port].hasOwnProperty("send")) {
+                    console.log("roba", port);
                     await listen(port, (event) => {
                         console.log("To Elm:", port, event);
                         app.ports[port].send(event);

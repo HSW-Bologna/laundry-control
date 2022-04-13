@@ -115,6 +115,7 @@ view model =
                 , Ui.mouseOver [ Background.color primaryColorLight ]
                 , Background.color primaryColor
                 , Font.color <| Ui.rgb 1 1 1
+                , Font.size 40
                 ]
                 { onPress = Just (PickMachine page), label = Ui.text text }
 

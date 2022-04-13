@@ -1,7 +1,7 @@
 module AppWidgets.AppWidgets exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (IntlString, Language(..), languageString)
-import AppData.IpAddress exposing (IpAddress, asList)
+import AppData.IpAddress as IpAddress exposing (IpAddress, asList, changePart)
 import AppData.Parameter as Parameter exposing (Parameter)
 import AppData.WashingMachineConfiguration as WMC exposing (WashingStep)
 import AppWidgets.Style as Style
@@ -288,8 +288,8 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-ipDialog : Context -> IpAddress -> (Int -> Int -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
-ipDialog context ip msg submit =
+ipDialog : Context -> List IpAddress -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
+ipDialog context available ip msg submit =
     let
         button text event align =
             Ui.el [ align ] <|
@@ -298,10 +298,8 @@ ipDialog context ip msg submit =
     { onDismiss = Just <| submit Nothing
     , content =
         Ui.el
-            (Card.simple
-                ++ [ Ui.width <| Ui.px 320, Ui.height <| Ui.px 240, Ui.centerX, Ui.centerY ]
-            )
-            (Ui.column [ Ui.height Ui.fill, Ui.width Ui.fill ]
+            (Style.modal 480)
+            (Ui.column [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.spacing 8 ]
                 [ Ui.text <|
                     translate Intl.InserisciIp
                         context
@@ -310,13 +308,29 @@ ipDialog context ip msg submit =
                         List.indexedMap
                             (\i val ->
                                 Input.text []
-                                    { onChange = \s -> msg i (Maybe.withDefault 0 <| String.toInt s)
+                                    { onChange = \s -> msg <| changePart ip i (Maybe.withDefault 0 <| String.toInt s)
                                     , text = String.fromInt val
                                     , placeholder = Nothing
                                     , label = Input.labelHidden "ip"
                                     }
                             )
                             (asList ip)
+                , if List.length available == 0 then
+                    Ui.el [ Ui.centerX ] <|
+                        Widget.circularProgressIndicator (Material.progressIndicator Style.palette) Nothing
+
+                  else
+                    available
+                        |> List.map
+                            (\x ->
+                                Widget.fullBleedItem (Material.fullBleedItem Style.palette)
+                                    { onPress = Just <| msg x
+                                    , icon = always Ui.none
+                                    , text = IpAddress.toString x
+                                    }
+                            )
+                        |> Widget.itemList (Material.cardColumn Style.palette)
+                        |> Ui.el [ Ui.height <| Ui.maximum 240 Ui.fill, Ui.width Ui.fill ]
                 , Ui.row
                     [ Ui.alignBottom, Ui.width Ui.fill ]
                     [ button "cancella" (submit Nothing) Ui.alignLeft

@@ -2,7 +2,8 @@ module Pages.WashingMachineTabs.RemoteControl exposing (..)
 
 import AUTOGEN_FILE_translations as Intl
 import AppData.IpAddress exposing (IpAddress)
-import AppData.WashingMachineState exposing (ConnectionState(..))
+import AppData.WashingMachineState as WMS exposing (ConnectionState(..))
+import AppWidgets.AppWidgets as AppWidgets
 import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
@@ -26,18 +27,33 @@ update msg model =
             ( model, Cmd.none )
 
 
+
+-- VIEW
+
+
 view : SharedModel a -> Ui.Element Msg
 view { connectionState, context } =
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16 ]
         [ Ui.paragraph [ Font.size 24 ] [ Ui.text (translate Intl.ControlloRemoto context) ]
-        , Ui.text <|
-            case connectionState of
-                Connected _ ->
-                    "Connesso"
+        , Ui.paragraph [ Ui.width Ui.fill ]
+            [ case connectionState of
+                Connected state ->
+                    stateView context state
 
                 Error error ->
-                    "Errore: " ++ error
+                    Ui.text <| "Errore: " ++ error
 
                 Disconnected ->
-                    "Disconnesso"
+                    Ui.text <| "Disconnesso"
+            ]
         ]
+
+
+stateView : Context -> WMS.WashingMachineState -> Ui.Element msg
+stateView context { state } =
+    case state of
+        WMS.Running ->
+            AppWidgets.textButton (translate Intl.Ferma context) Nothing
+
+        WMS.Stopped ->
+            AppWidgets.textButton (translate Intl.Esegui context) Nothing

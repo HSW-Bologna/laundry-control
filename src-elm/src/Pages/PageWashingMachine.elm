@@ -1,7 +1,7 @@
 port module Pages.PageWashingMachine exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (getTranslation, languageFromString)
-import AppData.IpAddress exposing (IpAddress, changePart, localhost, toString)
+import AppData.IpAddress as IpAddress exposing (IpAddress, changePart, localhost, toString)
 import AppData.WashingMachineConfiguration as WMC exposing (MachineConfiguration, MachineParameters, extractArchive)
 import AppData.WashingMachineState as WSS
 import AppWidgets.AppWidgets as AppWidgets
@@ -22,7 +22,7 @@ import Json.Encode as Encode
 import Pages.WashingMachineTabs.MachineConfiguration as ParMacTab
 import Pages.WashingMachineTabs.RemoteControl as RemControlTab
 import Pages.WashingMachineTabs.WashingCycle as WashCycleTab
-import Ports exposing (decodeEvent, eventDecoder, navigateHome)
+import Ports as Ports exposing (decodeEvent)
 import Task
 import Time
 import Widget as Widget
@@ -57,6 +57,7 @@ type alias Model =
     , config : Maybe MachineConfiguration
     , snackbar : Snackbar.Snackbar String
     , connectionState : WSS.ConnectionState
+    , localMachines : List IpAddress
     }
 
 
@@ -75,6 +76,7 @@ init language =
       , config = Nothing
       , snackbar = Snackbar.init
       , connectionState = WSS.Disconnected
+      , localMachines = []
       }
     , Cmd.none
     )
@@ -143,12 +145,16 @@ type Msg
     | ChangeTabCycle Int
     | TimePassed Int
     | StateUpdate Encode.Value
+    | IpAddresses Encode.Value
     | InsertIpAddress
-    | IpAddessChange Int Int
+    | IpAddessChange IpAddress
     | LocalConnectionRequest (Maybe IpAddress)
 
 
 port washingMachineHttpConnect : String -> Cmd msg
+
+
+port ipAddresses : (Encode.Value -> msg) -> Sub msg
 
 
 port stateUpdate : (Encode.Value -> msg) -> Sub msg
@@ -198,10 +204,18 @@ update msg model =
     case ( msg, model.tabModel ) of
         -- Global messages
         ( Back, _ ) ->
-            ( model, navigateHome model.context.language )
+            ( model, Ports.navigateHome model.context.language )
 
         ( TimePassed int, _ ) ->
             ( { model | snackbar = model.snackbar |> Snackbar.timePassed int }, Cmd.none )
+
+        ( IpAddresses value, _ ) ->
+            ( decodeEvent "ipAddresses" IpAddress.listDecoder value
+                |> Result.toMaybe
+                |> Maybe.map (\ips -> { model | localMachines = ips })
+                |> Maybe.withDefault model
+            , Cmd.none
+            )
 
         ( StateUpdate state, _ ) ->
             case decodeEvent "stateUpdate" WSS.connectionStateUpdateDecoder state of
@@ -212,17 +226,10 @@ update msg model =
                     ( newRawMessage (Decode.errorToString error) model, Cmd.none )
 
         ( InsertIpAddress, _ ) ->
-            ( { model | visibleModal = IpInput localhost }, Cmd.none )
+            ( { model | visibleModal = IpInput localhost }, Ports.searchMachines () )
 
-        ( IpAddessChange i val, _ ) ->
-            ( case model.visibleModal of
-                IpInput ip ->
-                    { model | visibleModal = IpInput <| changePart ip i val }
-
-                _ ->
-                    model
-            , Cmd.none
-            )
+        ( IpAddessChange ip, _ ) ->
+            ( { model | visibleModal = IpInput ip }, Cmd.none )
 
         ( LocalConnectionRequest (Just ip), _ ) ->
             ( model |> hideModal |> hideMenu, washingMachineHttpConnect (toString ip) )
@@ -389,6 +396,7 @@ subscriptions _ =
     Sub.batch
         [ Time.every 100 (always (TimePassed 100))
         , stateUpdate StateUpdate
+        , ipAddresses IpAddresses
         ]
 
 
@@ -465,7 +473,7 @@ view model =
                     []
 
                 IpInput ip ->
-                    AppWidgets.ipDialog model.context ip IpAddessChange LocalConnectionRequest
+                    AppWidgets.ipDialog model.context model.localMachines ip IpAddessChange LocalConnectionRequest
 
         cycles =
             Maybe.map

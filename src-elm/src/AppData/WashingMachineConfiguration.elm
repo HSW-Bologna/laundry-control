@@ -128,11 +128,11 @@ type alias MachineParameters =
     , detergentLoadTime : Int
     , minSecEnable : Int
     , coinAcceptorUnlocking : Int
-    , uselessPar7 : Int
+    , alarmInhibition : Int
     , autoStart : Int
     , continousRun : Int
     , dateTime : Int
-    , detergentExclusion : Int
+    , showDetergentExclusion : Int
     , pedantic : Int
     , rgbStop : Int
     , rgbWork : Int
@@ -144,7 +144,7 @@ type alias MachineParameters =
     , globalPriceValue : Int
     , frontType : Int
     , lockType : Int
-    , alarmInhibition : Int
+    , lockPulse : Int
     }
 
 
@@ -199,6 +199,7 @@ boolOptions =
 parameterMetadataList : List MachineParameter
 parameterMetadataList =
     let
+        colorOptions = [Intl.Spento, Intl.Blu, Intl.Verde, Intl.Azzurro, Intl.Rosso, Intl.Viola, Intl.Giallo, Intl.Bianco]
         uiOptions =
             [ Intl.Self, Intl.Laboratorio ]
 
@@ -248,6 +249,81 @@ parameterMetadataList =
     , { get = .basketDiameter, set = \v p -> { p | basketDiameter = v }, min = 0, max = 10000, default = 0, description = Intl.DiametroDelCesto, format = formatNumber, ui = Parameter.Number }
     , { get = .basketDepth, set = \v p -> { p | basketDepth = v }, min = 0, max = 10000, default = 0, description = Intl.ProfonditaDelCesto, format = formatNumber, ui = Parameter.Number }
     , { get = .trapHeight, set = \v p -> { p | trapHeight = v }, min = 0, max = 1000, default = 0, description = Intl.AltezzaTrappola, format = formatNumber, ui = Parameter.Number }
+    , { get = .ioExpander, set = \v p -> { p | ioExpander = v }, min = 0, max = 1, default = 0, description = Intl.EspansioneIO, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .detergents, set = \v p -> { p | detergents = v }, min = 3, max = 10, default = 5, description = Intl.NumeroSaponiUtilizzabili, format = formatNumber, ui = Parameter.Number }
+    , { get = .excludedDetergent, set = \v p -> { p | excludedDetergent = v }, min = 0, max = 10, default = 0, description = Intl.EsclusioneSapone, format = formatNumber, ui = Parameter.Number }
+    , { get = .machineBusy, set = \v p -> { p | machineBusy = v }, min = 0, max = 2, default = 2, description = Intl.AbilitazioneMacchinaLiberaETipo, format = formatOption [ Intl.NonGestita, Intl.CommutaAlloStart, Intl.CommutaAlPagamento ], ui = Parameter.Option }
+    , { get = .machineBusySignal, set = \v p -> { p | machineBusySignal = v }, min = 0, max = 1, default = 0, description = Intl.ContattoMacchinaLibera, format = formatOption [ Intl.NormalmenteChiuso, Intl.NormalmenteAperto ], ui = Parameter.Option }
+    , { get = .auxOut1Type, set = \v p -> { p | auxOut1Type = v }, min = 0, max = 1, default = 0, description = Intl.TipologiaDellIngressoAusiliario1, format = formatOption [ Intl.SbloccoPagamento, Intl.StandbySaponi ], ui = Parameter.Option }
+    , { get = .auxOut2Type, set = \v p -> { p | auxOut2Type = v }, min = 0, max = 1, default = 1, description = Intl.TipologiaDellUscitaAusiliaria2, format = formatOption [ Intl.MacchinaOccupata, Intl.Lampeggiante ], ui = Parameter.Option }
+    , { get = .auxOut3Type, set = \v p -> { p | auxOut3Type = v }, min = 0, max = 1, default = 1, description = Intl.TipologiaDellUscitaAusiliaria3, format = formatOption [ Intl.H2ORecuperoDepurata, Intl.PompaRicircolo ], ui = Parameter.Option }
+    , { get = .auxOut4Type, set = \v p -> { p | auxOut4Type = v }, min = 0, max = 1, default = 1, description = Intl.TipologiaDellUscitaAusiliaria4, format = formatOption [ Intl.ScaricoRecupero, Intl.RiscaldamentoIndiretto ], ui = Parameter.Option }
+    , { get = .drainRecycle, set = \v p -> { p | drainRecycle = v }, min = 0, max = 1, default = 0, description = Intl.ValvolaDiScaricoRecupero, format = formatOption [ Intl.NormalmenteChiuso, Intl.NormalmenteAperto ], ui = Parameter.Option }
+    , { get = .levelReducedLoad, set = \v p -> { p | levelReducedLoad = v }, min = 10, max = 190, default = 100, description = Intl.PercentualeLivelloConCaricoRidotto, format = formatNumber, ui = Parameter.Number }
+    , { get = .detergentReducedLoad, set = \v p -> { p | detergentReducedLoad = v }, min = 10, max = 190, default = 100, description = Intl.PercentualeSaponeConCaricoRidotto, format = formatNumber, ui = Parameter.Number }
+    , { get = .autoStart, set = \v p -> { p | autoStart = v }, min = 0, max = 1, default = 0, description = Intl.Autoavvio, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .proximity, set = \v p -> { p | proximity = v }, min = 0, max = 1, default = 0, description = Intl.SensoreDiProssimita, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .beams, set = \v p -> { p | beams = v }, min = 1, max = 12, default = 6, description = Intl.NumeroDiRaggi, format = formatNumber, ui = Parameter.Number }
+    , { get = .revCounterCorrection, set = \v p -> { p | revCounterCorrection = v }, min = 0, max = 200, default = 111, description = Intl.FattoreDiCorrezioneAlContagiri, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometer, set = \v p -> { p | accelerometer = v }, min = 0, max = 3, default = 2, description = Intl.Accelerometro, format = formatOption [ Intl.Disabilitato, Intl.Velocita1, Intl.Velocita2SoglieDelta, Intl.Velocita3SoglieHi ], ui = Parameter.Option }
+    , { get = .accelerometerScale, set = \v p -> { p | accelerometerScale = v }, min = 0, max = 5, default = 3, description = Intl.ScalaAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerXThresh, set = \v p -> { p | accelerometerXThresh = v }, min = 0, max = 511, default = 100, description = Intl.SogliaXAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerYThresh, set = \v p -> { p | accelerometerYThresh = v }, min = 0, max = 511, default = 90, description = Intl.SogliaYAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerZThresh, set = \v p -> { p | accelerometerZThresh = v }, min = 0, max = 511, default = 110, description = Intl.SogliaZAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerXThreshH, set = \v p -> { p | accelerometerXThreshH = v }, min = 0, max = 511, default = 155, description = Intl.SogliaXAccelerometroH, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerYThreshH, set = \v p -> { p | accelerometerYThreshH = v }, min = 0, max = 511, default = 135, description = Intl.SogliaYAccelerometroH, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerZThreshH, set = \v p -> { p | accelerometerZThreshH = v }, min = 0, max = 511, default = 110, description = Intl.SogliaZAccelerometroH, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerRounds, set = \v p -> { p | accelerometerRounds = v }, min = 0, max = 1000, default = 200, description = Intl.GiriAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerRounds2, set = \v p -> { p | accelerometerRounds2 = v }, min = 0, max = 1000, default = 300, description = Intl.GiriAccelerometro2, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerDelta, set = \v p -> { p | accelerometerDelta = v }, min = 0, max = 100, default = 50, description = Intl.DeltaAccelerometro, format = formatNumber, ui = Parameter.Number }
+    , { get = .accelerometerWaitTime, set = \v p -> { p | accelerometerWaitTime = v }, min = 0, max = 60, default = 20, description = Intl.TempoDiAttesaDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .accelerometerDrainTime, set = \v p -> { p | accelerometerDrainTime = v }, min = 0, max = 1000, default = 20, description = Intl.TempoDiScaricoDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM "°C", ui = Parameter.Number }
+    , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM "°C", ui = Parameter.Number }
+    , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM "°C", ui = Parameter.Number }
+    , { get = .termodegratationTemperature, set = \v p -> { p | termodegratationTemperature = v }, min = 0, max = 60, default = 45, description = Intl.TemperaturaDiTermodegradazione, format = formatWithUM "°C", ui = Parameter.Number }
+    , { get = .levelType, set = \v p -> { p | levelType = v }, min = 0, max = 2, default = 0, description = Intl.TipoLivello, format = formatOption [ Intl.Centimetri, Intl.UnContalitri, Intl.DueContalitri ], ui = Parameter.Option }
+    , { get = .levelHysteresisTime, set = \v p -> { p | levelHysteresisTime = v }, min = 1, max = 60, default = 3, description = Intl.TempoDiIsteresiLivello, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .cmMaxLevel, set = \v p -> { p | cmMaxLevel = v }, min = 2, max = 100, default = 48, description = Intl.CentimetriLivelloMassimo, format = formatWithUM "cm", ui = Parameter.Number }
+    , { get = .surfaceLevel, set = \v p -> { p | surfaceLevel = v }, min = 15, max = 10000, default = 50, description = Intl.LivelloDiSfioro, format = formatNumber, ui = Parameter.Number }
+    , { get = .cmMinDrain, set = \v p -> { p | cmMinDrain = v }, min = 0, max = 30, default = 1, description = Intl.LivelloMinimoScarico, format = formatNumber, ui = Parameter.Number }
+    , { get = .cmMinHeating, set = \v p -> { p | cmMinHeating = v }, min = 2, max = 30, default = 4, description = Intl.LivelloMinimoRiscaldamento, format = formatNumber, ui = Parameter.Number }
+    , { get = .maxLiters, set = \v p -> { p | maxLiters = v }, min = 15, max = 10000, default = 50, description = Intl.LitriMassimiDiRiempimento, format = formatNumber, ui = Parameter.Number }
+    , { get = .ltMinHeating, set = \v p -> { p | ltMinHeating = v }, min = 1, max = 1000, default = 20, description = Intl.LitriMinimiInRiscaldamento, format = formatNumber, ui = Parameter.Number }
+    , { get = .pulsesPerLiter, set = \v p -> { p | pulsesPerLiter = v }, min = 0, max = 10000, default = 328, description = Intl.ImpulsiPerLitro, format = formatNumber, ui = Parameter.Number }
+    , { get = .inverterType, set = \v p -> { p | inverterType = v }, min = 0, max = 1, default = 328, description = Intl.ModelloDiInverter, format = formatOption [ Intl.AvantiIndietro, Intl.MarciaDirezione ], ui = Parameter.Number }
+    , { get = .serviceSpeed, set = \v p -> { p | serviceSpeed = v }, min = 1, max = 100, default = 36, description = Intl.VelocitaDiServizio, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .minimumWashSpeed, set = \v p -> { p | minimumWashSpeed = v }, min = 0, max = 150, default = 20, description = Intl.VelocitaMinimaDiLavaggio, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .maximumWashSpeed, set = \v p -> { p | maximumWashSpeed = v }, min = 0, max = 150, default = 60, description = Intl.VelocitaMassimaDiLavaggio, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .preparationRotationEnable, set = \v p -> { p | preparationRotationEnable = v }, min = 0, max = 9, default = 3, description = Intl.NumeroDiCicliDiPreparazione, format = formatNumber, ui = Parameter.Number }
+    , { get = .preparationRotationTime, set = \v p -> { p | preparationRotationTime = v }, min = 1, max = 200, default = 20, description = Intl.TempoDiMarciaInPreparazione, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .preparationPauseTime, set = \v p -> { p | preparationPauseTime = v }, min = 2, max = 240, default = 5, description = Intl.TempoDiSostaInPreparazione, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .preparationMinimumSpeed, set = \v p -> { p | preparationMinimumSpeed = v }, min = 1, max = 200, default = 20, description = Intl.VelocitaMinimaDiPreparazione, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .preparationMaximumSpeed, set = \v p -> { p | preparationMaximumSpeed = v }, min = 1, max = 200, default = 50, description = Intl.VelocitaMassimaDiPreparazione, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge1MinimumSpeed, set = \v p -> { p | centrifuge1MinimumSpeed = v }, min = 0, max = 1200, default = 1, description = Intl.VelocitaMinimaDellaCentrifuga1, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge1MaximumSpeed, set = \v p -> { p | centrifuge1MaximumSpeed = v }, min = 0, max = 1200, default = 1000, description = Intl.VelocitaMassimaDellaCentrifuga1, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge2MinimumSpeed, set = \v p -> { p | centrifuge2MinimumSpeed = v }, min = 0, max = 1200, default = 1, description = Intl.VelocitaMinimaDellaCentrifuga2, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge2MaximumSpeed, set = \v p -> { p | centrifuge2MaximumSpeed = v }, min = 0, max = 1200, default = 1000, description = Intl.VelocitaMassimaDellaCentrifuga2, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge3MinimumSpeed, set = \v p -> { p | centrifuge3MinimumSpeed = v }, min = 0, max = 1200, default = 1, description = Intl.VelocitaMinimaDellaCentrifuga3, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .centrifuge3MaximumSpeed, set = \v p -> { p | centrifuge3MaximumSpeed = v }, min = 0, max = 1200, default = 1000, description = Intl.VelocitaMassimaDellaCentrifuga3, format = formatWithUM "rpm", ui = Parameter.Number }
+    , { get = .rampMinimumTime, set = \v p -> { p | rampMinimumTime = v }, min = 3, max = 1000, default = 15, description = Intl.TempoMinimoDellaRampa, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .rampMaximumTime, set = \v p -> { p | rampMaximumTime = v }, min = 3, max = 1000, default = 90, description = Intl.TempoMassimoDellaRampa, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
+    , { get = .minSecEnable, set = \v p -> { p | minSecEnable = v }, min = 0, max = 1, default = 0, description = Intl.AbilitazioneDelCambioMinutiSecondi, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .lockType, set = \v p -> { p | lockType = v }, min = 0, max = 3, default = 0, description = Intl.TipoDiSerratura, format = formatOption [Intl.NuovaTreMicroLivello, Intl.BobinaUnMicroLivello, Intl.NuovaTreMicroNoLivello, Intl.BobinaUnMicroNoLivello], ui = Parameter.Option }
+    , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
+    , { get = .lockPulse, set = \v p -> { p | lockPulse = v }, min = 5, max = 30, default = 8, description = Intl.DurataDellImpulsoDellaSerratura, format = formatNumber, ui = Parameter.Number }
+    , { get = .alarmInhibition, set = \v p -> { p | alarmInhibition = v }, min = 0, max = 1, default = 0, description = Intl.InibizioneAllarmi, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .continousRun, set = \v p -> { p | continousRun = v }, min = 0, max = 1, default = 0, description = Intl.CicloContinuo, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .dateTime, set = \v p -> { p | dateTime = v }, min = 0, max = 1, default = 0, description = Intl.VisualizzazioneDataEOra, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .pedantic, set = \v p -> { p | dateTime = v }, min = 0, max = 1, default = 0, description = Intl.VisualizzazionePedante, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .showDetergentExclusion, set = \v p -> { p | showDetergentExclusion = v }, min = 0, max = 1, default = 0, description = Intl.VisualizzazioneEsclusioneSapone, format = formatOption boolOptions, ui = Parameter.Option }
+    , { get = .rgbStop, set = \v p -> { p | rgbStop = v }, min = 0, max = 7, default = 7, description = Intl.ColoreLEDDaFermo, format = formatOption colorOptions, ui = Parameter.Option }
+    , { get = .rgbWork, set = \v p -> { p | rgbWork = v }, min = 0, max = 7, default = 1, description = Intl.ColoreLEDAlLavoro, format = formatOption colorOptions, ui = Parameter.Option }
+    , { get = .rgbPause, set = \v p -> { p | rgbPause = v }, min = 0, max = 7, default = 6, description = Intl.ColoreLEDInPausa, format = formatOption colorOptions, ui = Parameter.Option }
+    , { get = .rgbWaiting, set = \v p -> { p | rgbWaiting = v }, min = 0, max = 7, default = 2, description = Intl.ColoreLEDInAttesa, format = formatOption colorOptions, ui = Parameter.Option }
+    , { get = .rgbWarning, set = \v p -> { p | rgbWarning = v }, min = 0, max = 7, default = 3, description = Intl.ColoreLEDConAvviso, format = formatOption colorOptions, ui = Parameter.Option }
+    , { get = .rgbAlarm, set = \v p -> { p | rgbAlarm = v }, min = 0, max = 7, default = 4, description = Intl.ColoreLEDConAllarme, format = formatOption colorOptions, ui = Parameter.Option }
     ]
 
 
@@ -745,11 +821,11 @@ encodeMachineParameters pars =
         , encodePar16 .detergentLoadTime
         , encodePar16 .minSecEnable
         , encodePar16 .coinAcceptorUnlocking
-        , encodePar16 .uselessPar7
+        , encodePar16 .alarmInhibition
         , encodePar16 .autoStart
         , encodePar16 .continousRun
         , encodePar16 .dateTime
-        , encodePar16 .detergentExclusion
+        , encodePar16 .showDetergentExclusion
         , encodePar16 .pedantic
         , encodePar8 .rgbStop
         , encodePar8 .rgbWork
@@ -761,7 +837,7 @@ encodeMachineParameters pars =
         , encodePar32 .globalPriceValue
         , encodePar16 .frontType
         , encodePar16 .lockType
-        , encodePar16 .alarmInhibition
+        , encodePar16 .lockPulse
         ]
         |> Encode.encode
 
@@ -1126,7 +1202,6 @@ washStepEncoder step =
 encodeWashCycle : WashingCycle -> Bytes
 encodeWashCycle cycle =
     let
-        --finalSize = 338
         names =
             [ cycle.name.italiano, cycle.name.english ]
                 ++ List.repeat 10 ""

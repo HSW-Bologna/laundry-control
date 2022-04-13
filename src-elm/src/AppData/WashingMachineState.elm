@@ -23,6 +23,23 @@ type ConnectionState
 
 connectionStateUpdateDecoder : Decode.Decoder ConnectionState
 connectionStateUpdateDecoder =
+    let
+        washingMachineStateDecoder : Decode.Decoder WashingMachineState
+        washingMachineStateDecoder =
+            Decode.succeed WashingMachineState
+                |> Pipeline.required "state"
+                    (Decode.map
+                        (\i ->
+                            case i of
+                                1 ->
+                                    Running
+
+                                _ ->
+                                    Stopped
+                        )
+                        Decode.int
+                    )
+    in
     Decode.oneOf
         [ Decode.andThen
             (\v ->
@@ -37,5 +54,5 @@ connectionStateUpdateDecoder =
         , Decode.succeed Error
             |> Pipeline.required "Error" Decode.string
         , Decode.succeed Connected
-            |> Pipeline.required "Connected" (Decode.succeed (WashingMachineState Stopped))
+            |> Pipeline.required "Connected" washingMachineStateDecoder
         ]

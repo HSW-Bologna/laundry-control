@@ -1,4 +1,6 @@
-module AppData.IpAddress exposing (IpAddress, fromInts, toString, changePart, localhost,asList)
+module AppData.IpAddress exposing (IpAddress, asList, changePart, fromInts, listDecoder, localhost, toString)
+
+import Json.Decode as Decode
 
 
 type alias IpAddress =
@@ -9,8 +11,25 @@ type alias IpAddress =
     }
 
 
+listDecoder : Decode.Decoder (List IpAddress)
+listDecoder =
+    Decode.list
+        (Decode.andThen
+            (\ip ->
+                case fromString ip of
+                    Just res ->
+                        Decode.succeed res
+
+                    Nothing ->
+                        Decode.fail ("Invalid ip address: " ++ ip)
+            )
+            Decode.string
+        )
+
+
 localhost : IpAddress
-localhost = IpAddress 127 0 0 1
+localhost =
+    IpAddress 127 0 0 1
 
 
 fromInts : Int -> Int -> Int -> Int -> Maybe IpAddress
@@ -37,6 +56,31 @@ toString { ip1, ip2, ip3, ip4 } =
         ++ String.fromInt ip4
 
 
+fromString : String -> Maybe IpAddress
+fromString ip =
+    case String.split "." ip |> List.map String.toInt of
+        ((Just ip1) :: (Just ip2) :: (Just ip3) :: (Just ip4) :: _) as list ->
+            if
+                List.all
+                    (\el ->
+                        case el of
+                            Just x ->
+                                x >= 0 && x < 256
+
+                            Nothing ->
+                                False
+                    )
+                    list
+            then
+                Just <| IpAddress ip1 ip2 ip3 ip4
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
+
+
 changePart : IpAddress -> Int -> Int -> IpAddress
 changePart ip i val =
     if val >= 0 && val <= 255 then
@@ -61,5 +105,5 @@ changePart ip i val =
 
 
 asList : IpAddress -> List Int
-asList {ip1, ip2, ip3 ,ip4} =
-    [ip1, ip2, ip3, ip4]
+asList { ip1, ip2, ip3, ip4 } =
+    [ ip1, ip2, ip3, ip4 ]

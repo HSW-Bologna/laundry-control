@@ -1,9 +1,12 @@
+use super::discovery;
 use super::prefs;
 use super::prefs::AppPreferences;
 use serde_json;
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::Window;
+use futures::future::FutureExt;
+use tokio::runtime::Runtime;
 
 #[derive(Clone, serde::Serialize)]
 enum FrontEndConnectionState {
@@ -35,12 +38,23 @@ enum Message {
   ConnectTo(String),
   Disconnect,
   Refresh,
+  UdpDiscovery,
 }
 
 pub fn task(window: Window) {
-  fn update(window: &Window, state: FrontEndConnectionState) {
+  fn emit_update(window: &Window, state: FrontEndConnectionState) {
+    println!("Updating state: {}", serde_json::to_string(&state).unwrap());
     window.emit("stateUpdate", state).unwrap();
   }
+
+  fn update_state(agent: &ureq::Agent, ip: &str) -> BackEndConnectionState {
+    match get_state(&agent, ip) {
+      Ok(value) => BackEndConnectionState::ConnectedToLocal(ip.into(), value),
+      Err(error) => BackEndConnectionState::Error(error),
+    }
+  }
+
+  let rt = Runtime::new().expect("Failed to build pool");
 
   if let Some(preferences) = prefs::get_user_preferences() {
     println!(
@@ -54,7 +68,7 @@ pub fn task(window: Window) {
   let (tx, rx) = mpsc::channel::<Message>();
   let mut state = BackEndConnectionState::Disconnected;
   let agent: ureq::Agent = ureq::builder()
-    .timeout(std::time::Duration::from_secs(5))
+    .timeout(std::time::Duration::from_secs(4))
     .build();
 
   window.listen("washingMachineHttpConnect", move |event| {
@@ -64,6 +78,12 @@ pub fn task(window: Window) {
   let tx_clone = tx.clone();
   window.listen("navigateTo", move |_event| {
     tx_clone.send(Message::Refresh).ok();
+  });
+
+  let tx_clone = tx.clone();
+  window.listen("searchMachines", move |_event| {
+    println!("Searching for machines...");
+    tx_clone.send(Message::UdpDiscovery).ok();
   });
 
   let tx_clone = tx.clone();
@@ -85,34 +105,58 @@ pub fn task(window: Window) {
     }
   });
 
-  update(&window, state.clone().into());
+  emit_update(&window, state.clone().into());
 
-  println!("Starting controller loop");
+  println!("Starting backend loop");
+
+  let mut update_ts = Instant::now();
 
   loop {
     use Message::*;
     match rx.recv_timeout(timeout) {
       Ok(ConnectTo(ip)) => {
         println!("connecting...");
-        state = match get_state(&agent, ip.as_str()) {
-          Ok(value) => BackEndConnectionState::ConnectedToLocal(ip, value),
-          Err(error) => BackEndConnectionState::Error(error),
-        };
-        update(&window, state.clone().into());
+        state = update_state(&agent, ip.as_str());
+        emit_update(&window, state.clone().into());
+        update_ts = Instant::now();
       }
       Ok(Disconnect) => {}
       Ok(Refresh) => {
-        update(&window, state.clone().into());
+        emit_update(&window, state.clone().into());
+      }
+      Ok(UdpDiscovery) => {
+        let closure_window = window.clone();
+        rt.spawn(discovery::poll().then(|res| async move {
+          match res {
+            Ok(addresses) => {
+              closure_window.emit("ipAddresses", addresses).unwrap();
+            }
+            Err(e) => {
+              println!("{}", e);
+            }
+          }
+        }));
       }
       Err(mpsc::RecvTimeoutError::Disconnected) => println!("Disconnected from queue!"),
       Err(mpsc::RecvTimeoutError::Timeout) => (),
     }
+
+    match &state {
+      BackEndConnectionState::ConnectedToLocal(ip, _) => {
+        if update_ts.elapsed() > Duration::new(2, 0) {
+          state = update_state(&agent, ip.as_str());
+          emit_update(&window, state.clone().into());
+          update_ts = Instant::now();
+        }
+      }
+      _ => (),
+    };
   }
 }
 
 fn get_state(agent: &ureq::Agent, ip: &str) -> Result<serde_json::Value, String> {
   agent
-    .get(format!("http://{}:8080/state", ip).as_str())
+    .get(format!("http://{}/state", ip).as_str())
     .call()
     .map_err(|e| String::from(format!("{:?}", e)))?
     .into_json::<serde_json::Value>()

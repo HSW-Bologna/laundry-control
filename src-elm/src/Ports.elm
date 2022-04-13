@@ -1,8 +1,7 @@
-port module Ports exposing (eventDecoder, navigateHome, navigateToPage, preferences, decodeEvent)
+port module Ports exposing (eventDecoder, navigateHome, navigateToPage, preferences, decodeEvent, searchMachines)
 
 import AUTOGEN_FILE_translations exposing (Language, languageString)
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Pipeline
 import Json.Encode as Encode
 
 
@@ -15,6 +14,9 @@ navigateHome language =
 
 
 port preferences : { language : String, machine : String } -> Cmd msg
+
+
+port searchMachines : () -> Cmd msg
 
 
 navigateToPage : String -> Language -> Cmd msg
