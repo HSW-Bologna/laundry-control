@@ -35,29 +35,21 @@
                     app.ports[port].subscribe(function (arg) {
                         console.log("From Elm:", port, arg);
 
-                        var toSend = undefined;
-                        if (typeof arg === "string" || arg instanceof String) {
-                            // If it's already a string don't stringify it (it adds quotes)
-                            toSend = arg;
-                        } else {
-                            toSend = JSON.stringify(arg);
-                        }
-
-                        emit(port, toSend)
+                        emit(port, JSON.stringify(arg))
                             .then(() => console.log("Event handled by Rust"))
                             .catch(() => console.log("Event discarded by Rust"));
                     });
                 } else if (app.ports[port].hasOwnProperty("send")) {
-                    console.log("roba", port);
                     await listen(port, (event) => {
                         console.log("To Elm:", port, event);
-                        app.ports[port].send(event);
+                        app.ports[port].send(event.payload);
                     });
                 }
             }
 
             app.ports.navigateTo.subscribe(function (message) {
                 changePage(message.page, message.language);
+                emit("backendPort", JSON.stringify("Refresh"));
             });
         }
     </script>

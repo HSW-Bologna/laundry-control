@@ -1,8 +1,9 @@
 module AppData.WashingMachineState exposing (..)
 
 import Json.Decode as Decode
+import Json.Decode.Extra as Decode
 import Json.Decode.Pipeline as Pipeline
-import Ports exposing (eventDecoder)
+import Ports
 
 
 type State
@@ -15,9 +16,15 @@ type alias WashingMachineState =
     }
 
 
+type alias Metadata =
+    { version : String
+    , machines : List String
+    }
+
+
 type ConnectionState
     = Disconnected
-    | Connected WashingMachineState
+    | Connected WashingMachineState Metadata
     | Error String
 
 
@@ -39,20 +46,18 @@ connectionStateUpdateDecoder =
                         )
                         Decode.int
                     )
+
+        metadataDecoder : Decode.Decoder Metadata
+        metadataDecoder =
+            Decode.succeed Metadata
+                |> Pipeline.required "app_version" Decode.string
+                |> Pipeline.required "machines" (Decode.list Decode.string)
     in
     Decode.oneOf
-        [ Decode.andThen
-            (\v ->
-                case v of
-                    "Disconnected" ->
-                        Decode.succeed Disconnected
-
-                    _ ->
-                        Decode.fail <| "Invalid variant " ++ v
-            )
-            Decode.string
+        [ Decode.null Disconnected
         , Decode.succeed Error
             |> Pipeline.required "Error" Decode.string
         , Decode.succeed Connected
-            |> Pipeline.required "Connected" washingMachineStateDecoder
+            |> Pipeline.requiredAt [ "Connected", "state" ] washingMachineStateDecoder
+            |> Pipeline.requiredAt [ "Connected", "metadata" ] metadataDecoder
         ]

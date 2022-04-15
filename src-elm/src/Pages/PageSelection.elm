@@ -58,7 +58,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SavedPreferences value ->
-            case decodeEvent "savedPreferences" preferencesDecoder value of
+            case decodeEvent preferencesDecoder value of
                 Ok { language, machine } ->
                     ( model, navigateToPage machine (languageFromString language) )
 

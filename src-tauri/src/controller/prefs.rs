@@ -1,7 +1,8 @@
 use preferences::{AppInfo, Preferences, PreferencesMap};
 use serde::{Deserialize, Serialize};
+use log::warn;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AppPreferences {
   pub language: String,
   pub machine: String,
@@ -30,10 +31,6 @@ pub fn set_usage_preferences(language: String, machine: String) {
 }
 
 pub fn get_user_preferences() -> Option<AppPreferences> {
-  println!(
-    "Trying to load preferences from {:?}",
-    preferences::prefs_base_dir()
-  );
   match PreferencesMap::<String>::load(&APP_INFO, PREFERENCES_KEY) {
     Ok(map) => {
       if let (Some(language), Some(machine)) = (map.get(LANGUAGE_PREF), map.get(MACHINE_PREF)) {
@@ -46,7 +43,7 @@ pub fn get_user_preferences() -> Option<AppPreferences> {
       }
     }
     Err(e) => {
-      println!("Error while loading preferences: {:?}", e);
+      warn!("Error while loading preferences: {:?}", e);
       None
     }
   }

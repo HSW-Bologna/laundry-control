@@ -20,7 +20,16 @@ br =
 
 borderColor : Ui.Attr decorative msg
 borderColor =
-    Element.Border.color (Ui.rgb255 210 210 210)
+    Element.Border.color (Ui.rgb255 0x60 0x7D 0x8B)
+
+
+focusedBorder : Bool -> List (Ui.Attr () msg)
+focusedBorder focused =
+    if focused then
+        [ borderColor, Element.Border.width 2, Element.Border.rounded 4 ]
+
+    else
+        []
 
 
 palette : Material.Palette

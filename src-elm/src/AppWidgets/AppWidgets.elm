@@ -288,7 +288,7 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-ipDialog : Context -> List IpAddress -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
+ipDialog : Context -> List ( IpAddress, String ) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
 ipDialog context available ip msg submit =
     let
         button text event align =
@@ -322,11 +322,11 @@ ipDialog context available ip msg submit =
                   else
                     available
                         |> List.map
-                            (\x ->
+                            (\( x, node ) ->
                                 Widget.fullBleedItem (Material.fullBleedItem Style.palette)
                                     { onPress = Just <| msg x
                                     , icon = always Ui.none
-                                    , text = IpAddress.toString x
+                                    , text = IpAddress.toString x ++ " : " ++ node
                                     }
                             )
                         |> Widget.itemList (Material.cardColumn Style.palette)
@@ -370,6 +370,24 @@ washTypeImage washType =
                     [ Ui.alignRight, Ui.width <| Ui.px 160 ]
                     { src = src, description = "Wash type" }
            )
+
+
+
+-- REMOTE CONTROL
+
+
+archiveList : List String -> (String -> msg) -> Ui.Element msg
+archiveList archives msg =
+    let
+        archiveOption name =
+            Widget.fullBleedItem (Material.fullBleedItem Style.palette)
+                { onPress = Just <| msg name
+                , icon = always Ui.none
+                , text = name
+                }
+    in
+    List.map archiveOption archives
+        |> Widget.itemList (Material.cardColumn Style.palette)
 
 
 

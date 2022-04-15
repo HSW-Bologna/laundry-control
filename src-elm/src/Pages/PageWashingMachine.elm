@@ -10,6 +10,7 @@ import Array exposing (Array)
 import Array.Extra as Array
 import Browser
 import Bytes exposing (Bytes)
+import Bytes.Extra as Bytes
 import Context exposing (Context, translate)
 import Element as Ui
 import File exposing (File)
@@ -22,7 +23,7 @@ import Json.Encode as Encode
 import Pages.WashingMachineTabs.MachineConfiguration as ParMacTab
 import Pages.WashingMachineTabs.RemoteControl as RemControlTab
 import Pages.WashingMachineTabs.WashingCycle as WashCycleTab
-import Ports as Ports exposing (decodeEvent)
+import Ports as Ports exposing (decodeEvent, getRemoteMachineConfiguration)
 import Task
 import Time
 import Widget as Widget
@@ -53,11 +54,11 @@ type alias Model =
     , rightMenuVisible : Bool
     , visibleModal : VisibleModal
     , programListExpanded : Bool
-    , tabModel : Maybe TabModel
+    , tabModel : TabModel
     , config : Maybe MachineConfiguration
     , snackbar : Snackbar.Snackbar String
     , connectionState : WSS.ConnectionState
-    , localMachines : List IpAddress
+    , localMachines : List ( IpAddress, String )
     }
 
 
@@ -72,7 +73,7 @@ init language =
       , rightMenuVisible = False
       , visibleModal = NoModal
       , programListExpanded = False
-      , tabModel = Nothing
+      , tabModel = NoTab
       , config = Nothing
       , snackbar = Snackbar.init
       , connectionState = WSS.Disconnected
@@ -86,6 +87,7 @@ type TabModel
     = MachineConfigurationModel ParMacTab.Model
     | RemoteControlModel
     | WashCyclesModel WashCycleTab.Model
+    | NoTab
 
 
 type VisibleModal
@@ -97,21 +99,21 @@ type VisibleModal
 -- UPDATE
 
 
-toMachineConfigurationTabModel : Context -> MachineConfiguration -> TabModel
-toMachineConfigurationTabModel context config =
-    ParMacTab.buildModel context config
+toMachineConfigurationTabModel : MachineConfiguration -> TabModel
+toMachineConfigurationTabModel config =
+    ParMacTab.buildModel config
         |> MachineConfigurationModel
 
 
-toWashingCycleTabModel : Context -> Int -> WMC.WashingCycle -> WMC.MachineParameters -> TabModel
-toWashingCycleTabModel context index cycle parmac =
-    WashCycleTab.buildModel context index cycle parmac
+toWashingCycleTabModel : Int -> WMC.WashingCycle -> WMC.MachineParameters -> TabModel
+toWashingCycleTabModel index cycle parmac =
+    WashCycleTab.buildModel index cycle parmac
         |> WashCyclesModel
 
 
 fromMachineConfigurationTabModel : ParMacTab.Model -> Model -> Model
 fromMachineConfigurationTabModel tabModel model =
-    { model | config = Just tabModel.config, tabModel = Just <| MachineConfigurationModel <| tabModel }
+    { model | config = Just tabModel.config, tabModel = MachineConfigurationModel tabModel }
 
 
 fromWashingCycleTabModel : WashCycleTab.Model -> Model -> Model
@@ -120,7 +122,7 @@ fromWashingCycleTabModel tabModel model =
         newConfig =
             Maybe.map (\c -> { c | cycles = Array.update tabModel.index (always tabModel.cycle) c.cycles }) model.config
     in
-    { model | tabModel = Just <| WashCyclesModel <| tabModel, config = newConfig }
+    { model | tabModel = WashCyclesModel tabModel, config = newConfig }
 
 
 toRemoteControl : TabModel
@@ -135,6 +137,7 @@ type Msg
     | CreateNewMachineConfig
     | MachineSelected File
     | MachineLoaded Bytes
+    | StupidElmMachineLoaded (Array Int)
     | LeftDrawerToggle
     | RightMenuToggle
     | ProgramListToggle Bool
@@ -151,20 +154,20 @@ type Msg
     | LocalConnectionRequest (Maybe IpAddress)
 
 
-port washingMachineHttpConnect : String -> Cmd msg
-
-
 port ipAddresses : (Encode.Value -> msg) -> Sub msg
 
 
 port stateUpdate : (Encode.Value -> msg) -> Sub msg
 
 
+port remoteMachineLoaded : (Array Int -> msg) -> Sub msg
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         closeTab m =
-            { m | tabModel = Nothing }
+            { m | tabModel = NoTab }
 
         newRawMessage s m =
             { m | snackbar = Snackbar.dismiss model.snackbar |> Snackbar.insert s }
@@ -181,25 +184,25 @@ update msg model =
         fillTabWithConfig config m =
             let
                 updatedModel =
-                    { m | config = Just config, tabModel = Just <| toMachineConfigurationTabModel m.context config }
+                    { m | config = Just config, tabModel = toMachineConfigurationTabModel config }
             in
             case m.tabModel of
-                Just (MachineConfigurationModel _) ->
+                MachineConfigurationModel _ ->
                     updatedModel
 
-                Nothing ->
+                NoTab ->
                     updatedModel
 
-                Just _ ->
+                _ ->
                     { m | config = Just config }
 
         fillTabWithConnection connection m =
             case m.tabModel of
-                Just _ ->
-                    { m | connectionState = connection }
+                NoTab ->
+                    { m | connectionState = connection, tabModel = toRemoteControl }
 
-                Nothing ->
-                    { m | connectionState = connection, tabModel = Just <| toRemoteControl }
+                _ ->
+                    { m | connectionState = connection }
     in
     case ( msg, model.tabModel ) of
         -- Global messages
@@ -210,7 +213,26 @@ update msg model =
             ( { model | snackbar = model.snackbar |> Snackbar.timePassed int }, Cmd.none )
 
         ( IpAddresses value, _ ) ->
-            ( decodeEvent "ipAddresses" IpAddress.listDecoder value
+            ( decodeEvent
+                (Decode.list
+                    (Decode.andThen
+                        (\l ->
+                            case l of
+                                ip :: node :: _ ->
+                                    Maybe.map
+                                        (\validIp ->
+                                            Decode.succeed ( validIp, node )
+                                        )
+                                        (IpAddress.fromString ip)
+                                        |> Maybe.withDefault (Decode.fail "Invalid ip list")
+
+                                _ ->
+                                    Decode.fail "Invalid ip list"
+                        )
+                        (Decode.list Decode.string)
+                    )
+                )
+                value
                 |> Result.toMaybe
                 |> Maybe.map (\ips -> { model | localMachines = ips })
                 |> Maybe.withDefault model
@@ -218,7 +240,7 @@ update msg model =
             )
 
         ( StateUpdate state, _ ) ->
-            case decodeEvent "stateUpdate" WSS.connectionStateUpdateDecoder state of
+            case decodeEvent WSS.connectionStateUpdateDecoder state of
                 Ok res ->
                     ( model |> fillTabWithConnection res, Cmd.none )
 
@@ -226,13 +248,13 @@ update msg model =
                     ( newRawMessage (Decode.errorToString error) model, Cmd.none )
 
         ( InsertIpAddress, _ ) ->
-            ( { model | visibleModal = IpInput localhost }, Ports.searchMachines () )
+            ( { model | visibleModal = IpInput localhost }, Ports.searchMachines )
 
         ( IpAddessChange ip, _ ) ->
             ( { model | visibleModal = IpInput ip }, Cmd.none )
 
         ( LocalConnectionRequest (Just ip), _ ) ->
-            ( model |> hideModal |> hideMenu, washingMachineHttpConnect (toString ip) )
+            ( model |> hideModal |> hideMenu, Ports.washingMachineHttpConnect (toString ip) )
 
         ( LocalConnectionRequest Nothing, _ ) ->
             ( model |> hideModal |> hideMenu, Cmd.none )
@@ -258,6 +280,20 @@ update msg model =
 
         ( MachineSelected file, _ ) ->
             ( model, Task.perform MachineLoaded <| File.toBytes file )
+
+        ( StupidElmMachineLoaded stupidElmdata, _ ) ->
+            ( (case extractArchive (Bytes.fromByteValues <| Array.toList stupidElmdata) of
+                Just config ->
+                    model
+                        |> newMessage Intl.ConfigurazioneCaricata
+                        |> fillTabWithConfig config
+
+                Nothing ->
+                    newMessage Intl.ConfigurazioneNonValida model
+              )
+                |> hideMenu
+            , Cmd.none
+            )
 
         ( MachineLoaded data, _ ) ->
             ( (case extractArchive data of
@@ -290,7 +326,7 @@ update msg model =
             ( { model | rightMenuVisible = not model.rightMenuVisible }, Cmd.none )
 
         ( ChangeTab change, _ ) ->
-            ( { model | tabModel = Just change } |> hideMenu, Cmd.none )
+            ( { model | tabModel = change } |> hideMenu, Cmd.none )
 
         ( ChangeTabCycle index, _ ) ->
             case model.config of
@@ -311,7 +347,7 @@ update msg model =
                     in
                     ( Maybe.map
                         (\unwrappedCycle ->
-                            { model | config = Just newConfig, tabModel = Just <| toWashingCycleTabModel model.context index unwrappedCycle newConfig.parmac }
+                            { model | config = Just newConfig, tabModel = toWashingCycleTabModel index unwrappedCycle newConfig.parmac }
                                 |> hideMenu
                         )
                         cycle
@@ -323,17 +359,17 @@ update msg model =
                     ( model, Cmd.none )
 
         -- Machine Configuration tab messages
-        ( MachineConfigurationMsg tabMsg, Just (MachineConfigurationModel tabModel) ) ->
-            ( fromMachineConfigurationTabModel (ParMacTab.update tabMsg tabModel) model
+        ( MachineConfigurationMsg tabMsg, MachineConfigurationModel tabModel ) ->
+            ( fromMachineConfigurationTabModel (ParMacTab.update tabMsg model tabModel) model
             , Cmd.none
             )
 
         -- Remote Control tab messages
-        ( RemoteControlMsg _, Just RemoteControlModel ) ->
-            ( model, Cmd.none )
+        ( RemoteControlMsg tabMsg, RemoteControlModel ) ->
+            RemControlTab.update tabMsg model
 
         -- Wash Cycle parameters tab messages
-        ( WashCyclesMsg tabMsg, Just (WashCyclesModel tabModel) ) ->
+        ( WashCyclesMsg tabMsg, WashCyclesModel tabModel ) ->
             let
                 modelSwappedCycles newTabModel oldIndex newIndex =
                     Maybe.map
@@ -347,7 +383,7 @@ update msg model =
                         model.config
                         |> Maybe.withDefault model
             in
-            ( case WashCycleTab.update tabMsg tabModel of
+            ( case WashCycleTab.update tabMsg model tabModel of
                 ( newTabModel, WashCycleTab.MoveUp index ) ->
                     modelSwappedCycles newTabModel index (index - 1)
 
@@ -374,16 +410,7 @@ update msg model =
             )
 
         -- Runtime silent boilerplate-related errors
-        ( MachineConfigurationMsg _, Just _ ) ->
-            ( model, Cmd.none )
-
-        ( RemoteControlMsg _, Just _ ) ->
-            ( model, Cmd.none )
-
-        ( WashCyclesMsg _, Just _ ) ->
-            ( model, Cmd.none )
-
-        ( _, Nothing ) ->
+        ( _, _ ) ->
             ( model, Cmd.none )
 
 
@@ -397,6 +424,7 @@ subscriptions _ =
         [ Time.every 100 (always (TimePassed 100))
         , stateUpdate StateUpdate
         , ipAddresses IpAddresses
+        , remoteMachineLoaded StupidElmMachineLoaded
         ]
 
 
@@ -408,47 +436,45 @@ view : Model -> Html Msg
 view model =
     let
         selectedTab =
-            Maybe.andThen
-                (\x ->
-                    case x of
-                        MachineConfigurationModel _ ->
-                            Just 1
+            case model.tabModel of
+                MachineConfigurationModel _ ->
+                    Just 1
 
-                        RemoteControlModel ->
-                            Just 0
+                RemoteControlModel ->
+                    Just 0
 
-                        WashCyclesModel _ ->
-                            Nothing
-                )
-                model.tabModel
+                WashCyclesModel _ ->
+                    Nothing
+
+                NoTab ->
+                    Nothing
 
         selectedCycle =
-            Maybe.andThen
-                (\x ->
-                    case x of
-                        MachineConfigurationModel _ ->
-                            Nothing
+            case model.tabModel of
+                MachineConfigurationModel _ ->
+                    Nothing
 
-                        RemoteControlModel ->
-                            Nothing
+                RemoteControlModel ->
+                    Nothing
 
-                        WashCyclesModel { index } ->
-                            Just index
-                )
-                model.tabModel
+                WashCyclesModel { index } ->
+                    Just index
+
+                NoTab ->
+                    Nothing
 
         tabRouter =
             case model.tabModel of
-                Just (MachineConfigurationModel tabModel) ->
-                    ParMacTab.view tabModel |> Ui.map MachineConfigurationMsg
+                MachineConfigurationModel tabModel ->
+                    ParMacTab.view model tabModel |> Ui.map MachineConfigurationMsg
 
-                Just RemoteControlModel ->
+                RemoteControlModel ->
                     RemControlTab.view model |> Ui.map RemoteControlMsg
 
-                Just (WashCyclesModel tabModel) ->
-                    WashCycleTab.view tabModel |> Ui.map WashCyclesMsg
+                WashCyclesModel tabModel ->
+                    WashCycleTab.view model tabModel |> Ui.map WashCyclesMsg
 
-                Nothing ->
+                NoTab ->
                     Ui.el [ Ui.centerX, Ui.centerY ] menuOptions
 
         menuOptions =
@@ -519,7 +545,7 @@ view model =
                         { context = model.context
                         , selected = selectedTab
                         , back = Back
-                        , goToConfig = Maybe.map (\c -> ChangeTab (toMachineConfigurationTabModel model.context c)) model.config
+                        , goToConfig = Maybe.map (\c -> ChangeTab (toMachineConfigurationTabModel c)) model.config
                         , cyclesExpanded = model.programListExpanded
                         , toggleCycles = ProgramListToggle
                         , selectedCycle = selectedCycle

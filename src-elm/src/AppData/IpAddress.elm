@@ -1,4 +1,4 @@
-module AppData.IpAddress exposing (IpAddress, asList, changePart, fromInts, listDecoder, localhost, toString)
+module AppData.IpAddress exposing (IpAddress, asList, changePart, fromInts, localhost, toString, fromString)
 
 import Json.Decode as Decode
 
@@ -11,20 +11,6 @@ type alias IpAddress =
     }
 
 
-listDecoder : Decode.Decoder (List IpAddress)
-listDecoder =
-    Decode.list
-        (Decode.andThen
-            (\ip ->
-                case fromString ip of
-                    Just res ->
-                        Decode.succeed res
-
-                    Nothing ->
-                        Decode.fail ("Invalid ip address: " ++ ip)
-            )
-            Decode.string
-        )
 
 
 localhost : IpAddress

@@ -1,29 +1,30 @@
 module Pages.WashingMachineTabs.MachineConfiguration exposing (..)
 
 import AUTOGEN_FILE_translations as Intl
-import AppData.Parameter as Parameter exposing (Parameter)
-import AppData.WashingMachineConfiguration exposing (MachineConfiguration, MachineParameter, MachineParameters, changeName)
+import AppData.WashingMachineConfiguration exposing (MachineConfiguration, MachineParameter, changeName)
 import AppWidgets.AppWidgets as AppWidgets
 import AppWidgets.Style as Style
 import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
 import Element.Input as Input
-import FontAwesome.Solid exposing (scroll)
 import Widget as Widget
 import Widget.Material as Material
 
 
+type alias SharedModel a =
+    { a | context : Context }
+
+
 type alias Model =
-    { context : Context
-    , config : MachineConfiguration
+    { config : MachineConfiguration
     , selected : Maybe ( MachineParameter, AppWidgets.ParameterModificationData )
     }
 
 
-buildModel : Context -> MachineConfiguration -> Model
-buildModel context config =
-    Model context config Nothing
+buildModel : MachineConfiguration -> Model
+buildModel config =
+    Model config Nothing
 
 
 type Msg
@@ -34,8 +35,8 @@ type Msg
     | ParameterConfirm MachineParameter Int
 
 
-update : Msg -> Model -> Model
-update msg ({ config, context } as model) =
+update : Msg -> SharedModel a -> Model -> Model
+update msg { context } ({ config } as model) =
     case msg of
         ConfigNameChange name ->
             -- TODO: limita la dimensione a 32 caratteri
@@ -58,8 +59,8 @@ update msg ({ config, context } as model) =
 --ParameterSelected par ->
 
 
-view : Model -> Ui.Element Msg
-view model =
+view : SharedModel a -> Model -> Ui.Element Msg
+view { context } model =
     let
         modals =
             Maybe.map
@@ -68,7 +69,7 @@ view model =
                       , content =
                             AppWidgets.parameterModificationDialog
                                 { b = model.config.parmac
-                                , context = model.context
+                                , context = context
                                 , textChange = ParameterChange
                                 , dismiss = UnselectParameter
                                 , confirm = ParameterConfirm
@@ -86,11 +87,11 @@ view model =
     AppWidgets.scrollbarYEl (modals ++ [ Ui.width Ui.fill, Ui.height Ui.fill ]) <|
         Ui.column
             [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.scrollbarY, Ui.spacing 8 ]
-            [ Ui.paragraph [ Font.size 32 ] [ Ui.text (translate Intl.ParametriMacchina model.context) ]
+            [ Ui.paragraph [ Font.size 32 ] [ Ui.text (translate Intl.ParametriMacchina context) ]
             , Input.text [] { onChange = ConfigNameChange, text = model.config.parmac.name, placeholder = Nothing, label = Input.labelHidden "name" }
             , model.config.parmacMetadata
                 |> List.indexedMap
-                    (AppWidgets.parameter model.context model.config.parmac model.config.parmac SelectParameter)
+                    (AppWidgets.parameter context model.config.parmac model.config.parmac SelectParameter)
                 |> List.map Widget.asItem
                 |> Widget.itemList (Material.cardColumn Style.palette)
             ]

@@ -27,9 +27,14 @@ type TabCmd
     | Remove Int
 
 
+type alias SharedModel a =
+    { a
+        | context : Context
+    }
+
+
 type alias Model =
-    { context : Context
-    , index : Int
+    { index : Int
     , cycle : WashingCycle
     , parmac : MachineParameters
     , priceString : String
@@ -38,6 +43,7 @@ type alias Model =
     , removeStepDialog : Maybe Int
     , expandedSteps : Array Bool
     , selected : Maybe ( Int, WMC.WashParameter, AppWidgets.ParameterModificationData )
+    , focused : Maybe Int
     }
 
 
@@ -48,13 +54,13 @@ type alias StepMetadata =
     }
 
 
-buildModel : Context -> Int -> WashingCycle -> MachineParameters -> Model
-buildModel context index cycle parmac =
+buildModel : Int -> WashingCycle -> MachineParameters -> Model
+buildModel index cycle parmac =
     let
         price =
             formatPrice parmac.priceDecimalDigits cycle.price
     in
-    Model context index cycle parmac price False Nothing Nothing Array.empty Nothing
+    Model index cycle parmac price False Nothing Nothing Array.empty Nothing Nothing
 
 
 validatePriceString : MachineParameters -> String -> Maybe String
@@ -105,8 +111,8 @@ type Msg
     | NewStep Int WMC.WashingStep
 
 
-update : Msg -> Model -> ( Model, TabCmd )
-update msg ({ cycle, index, parmac, context } as model) =
+update : Msg -> SharedModel a -> Model -> ( Model, TabCmd )
+update msg { context } ({ cycle, index, parmac } as model) =
     let
         resize a i =
             if Array.length a < i + 1 then
@@ -116,7 +122,21 @@ update msg ({ cycle, index, parmac, context } as model) =
                 a
 
         toggleExpanded m i b =
-            { m | expandedSteps = Array.set i b <| resize m.expandedSteps i }
+            { m | expandedSteps = Array.set i b <| resize m.expandedSteps i, focused = Just i }
+
+        focusPrev i m =
+            if i > 0 then
+                { m | focused = Just (i - 1) }
+
+            else
+                m
+
+        focusNext i m =
+            if i + 1 < Array.length m.cycle.steps then
+                { m | focused = Just (i + 1) }
+
+            else
+                m
     in
     case msg of
         SelectParameter stepIndex par ->
@@ -142,7 +162,7 @@ update msg ({ cycle, index, parmac, context } as model) =
 
         ConfigNameChange name ->
             -- TODO: limita la dimensione a 32 caratteri
-            ( { model | cycle = changeWashCycleName name model.context.language cycle }, None )
+            ( { model | cycle = changeWashCycleName name context.language cycle }, None )
 
         ChangeType selected ->
             ( { model | cycle = { cycle | washType = selected } }, None )
@@ -180,6 +200,7 @@ update msg ({ cycle, index, parmac, context } as model) =
                 | cycle = WMC.swapWashSteps stepIndex (stepIndex - 1) cycle
                 , expandedSteps = Tuple.first <| WMC.swapElements stepIndex (stepIndex - 1) <| resize model.expandedSteps stepIndex
               }
+                |> focusPrev stepIndex
             , None
             )
 
@@ -188,6 +209,7 @@ update msg ({ cycle, index, parmac, context } as model) =
                 | cycle = WMC.swapWashSteps stepIndex (stepIndex + 1) cycle
                 , expandedSteps = Tuple.first <| WMC.swapElements stepIndex (stepIndex + 1) <| resize model.expandedSteps (stepIndex + 1)
               }
+                |> focusNext stepIndex
             , None
             )
 
@@ -199,6 +221,7 @@ update msg ({ cycle, index, parmac, context } as model) =
                 | cycle = { cycle | steps = Array.removeAt stepIndex cycle.steps }
                 , expandedSteps = Array.removeAt stepIndex model.expandedSteps
                 , removeStepDialog = Nothing
+                , focused = Nothing
               }
             , None
             )
@@ -321,8 +344,8 @@ newStepModal context metadata numSteps =
         ]
 
 
-view : Model -> Ui.Element Msg
-view { index, cycle, parmac, context, priceString, removeDialog, removeStepDialog, newStepDialog, expandedSteps, selected } =
+view : SharedModel a -> Model -> Ui.Element Msg
+view { context } { focused, index, cycle, parmac, priceString, removeDialog, removeStepDialog, newStepDialog, expandedSteps, selected } =
     let
         modals =
             (if removeDialog then
@@ -389,7 +412,7 @@ view { index, cycle, parmac, context, priceString, removeDialog, removeStepDialo
             getTranslation context.language cycle.name
 
         stepWidget i s =
-            Ui.row [ Ui.width Ui.fill ]
+            Ui.row (Ui.width Ui.fill :: Style.focusedBorder (Maybe.map (\f -> i == f) focused |> Maybe.withDefault False))
                 [ Ui.el [ Ui.width Ui.fill, Ui.alignTop ] <|
                     AppWidgets.step context parmac ExpandStep SelectParameter (Array.get i expandedSteps |> Maybe.withDefault False) i s
                 , Ui.el [ Ui.alignTop ] <| controlPad (MoveStepUp i) (MoveStepDown i) (AskToRemoveStep i) (CopyStep i)
