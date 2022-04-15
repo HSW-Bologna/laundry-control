@@ -1,3 +1,5 @@
+__pycache__
+build
 node_modules
-dist/elm.js
+dist/elm.min.js
 AUTOGEN_FILE_*

@@ -6,8 +6,8 @@
     "build": {
         "distDir": "../dist",
         "devPath": "../dist",
-        "beforeDevCommand": "sh build_elm.sh",
-        "beforeBuildCommand": "",
+        "beforeDevCommand": "scons",
+        "beforeBuildCommand": "scons --release",
         "withGlobalTauri": true
     },
     "tauri": {
