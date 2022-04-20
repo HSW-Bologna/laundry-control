@@ -14,19 +14,19 @@ type ParameterUiType
     | Price
 
 
-type alias Parameter a b =
-    { get : a -> Int
-    , set : Int -> a -> a
+type alias Parameter db info =
+    { get : db -> Int
+    , set : Int -> db -> db
     , min : Int
     , max : Int
     , default : Int
     , description : IntlString
-    , format : b -> Context -> Int -> String
+    , format : info -> Context -> Int -> String
     , ui : ParameterUiType
     }
 
 
-validate : Parameter a b -> Int -> Result IntlString Int
+validate : Parameter db info -> Int -> Result IntlString Int
 validate par value =
     if value < par.min then
         Err Intl.ValoreSottoIlMinimoConsentito
@@ -38,23 +38,23 @@ validate par value =
         Ok value
 
 
-options : b -> Context -> Parameter a b -> List String
-options b context { min, max, format } =
+options : info -> Context -> Parameter db info -> List String
+options info context { min, max, format } =
     List.range min max
-        |> List.map (format b context)
+        |> List.map (format info context)
 
 
-indexToOption : b -> Context -> Parameter a b -> Int -> String
-indexToOption b context par value =
-    options b context par
+indexToOption : info -> Context -> Parameter db info -> Int -> String
+indexToOption info context par value =
+    options info context par
         |> Array.fromList
         |> Array.get value
         |> Maybe.withDefault (translate Intl.Errore context)
 
 
-optionToIndex : b -> Context -> Parameter a b -> String -> Maybe Int
-optionToIndex b context par option =
-    options b context par
+optionToIndex : info -> Context -> Parameter db info -> String -> Maybe Int
+optionToIndex info context par option =
+    options info context par
         |> List.indexedMap (\i s -> ( s, i ))
         |> Dict.fromList
         |> Dict.get option

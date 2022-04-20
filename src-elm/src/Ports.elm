@@ -1,29 +1,27 @@
 port module Ports exposing
     ( decodeEvent
     , getRemoteMachineConfiguration
-    , sendRemoteMachineConfiguration
     , navigateHome
     , navigateToPage
     , preferences
     , searchMachines
+    , selectRemoteMachineConfiguration
+    , sendRemoteMachineConfiguration
+    , startProgram
+    , stopProgram
     , washingMachineHttpConnect
     )
 
 import AUTOGEN_FILE_translations exposing (Language, languageString)
+import Array exposing (Array)
 import Dict
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Array exposing (Array)
 
 
 languageKey : String
 languageKey =
     "language"
-
-
-pageKey : String
-pageKey =
-    "page"
 
 
 machineKey : String
@@ -55,60 +53,93 @@ navigateToPage page language =
     navigateTo { page = page, language = languageString language }
 
 
-preferencesVariant : String
-preferencesVariant =
-    "Preferences"
-
-
 preferences : { language : String, machine : String } -> Cmd msg
 preferences { language, machine } =
+    let
+        variant : String
+        variant =
+            "Preferences"
+    in
     Encode.dict identity Encode.string (Dict.fromList [ ( languageKey, language ), ( machineKey, machine ) ])
-        |> (\v -> Encode.object [ ( preferencesVariant, v ) ])
+        |> (\v -> Encode.object [ ( variant, v ) ])
         |> backendPort
-
-
-searchMachinesVariant : String
-searchMachinesVariant =
-    "SearchMachines"
 
 
 searchMachines : Cmd msg
 searchMachines =
-    Encode.string searchMachinesVariant
+    let
+        variant : String
+        variant =
+            "SearchMachines"
+    in
+    Encode.string variant
         |> backendPort
-
-
-washingMachineHttpConnectVariant : String
-washingMachineHttpConnectVariant =
-    "WashingMachineHttpConnect"
 
 
 washingMachineHttpConnect : String -> Cmd msg
 washingMachineHttpConnect machine =
-    Encode.object [ ( washingMachineHttpConnectVariant, Encode.string machine ) ]
+    let
+        variant : String
+        variant =
+            "WashingMachineHttpConnect"
+    in
+    Encode.object [ ( variant, Encode.string machine ) ]
         |> backendPort
-
-
-getRemoteMachineConfigurationVariant : String
-getRemoteMachineConfigurationVariant =
-    "GetRemoteMachineConfiguration"
 
 
 getRemoteMachineConfiguration : String -> Cmd msg
 getRemoteMachineConfiguration machine =
-    Encode.object [ ( getRemoteMachineConfigurationVariant, Encode.string machine ) ]
+    let
+        variant : String
+        variant =
+            "GetMachineConfiguration"
+    in
+    Encode.object [ ( variant, Encode.string machine ) ]
         |> backendPort
-
-sendRemoteMachineConfigurationVariant : String
-sendRemoteMachineConfigurationVariant =
-    "SendMachineConfiguration"
 
 
 sendRemoteMachineConfiguration : String -> Array Int -> Cmd msg
 sendRemoteMachineConfiguration name bytes =
-    Encode.object [ ( sendRemoteMachineConfigurationVariant, Encode.object [ ( "name", Encode.string name ), ( "bytes", Encode.array Encode.int bytes ) ] ) ]
+    let
+        variant : String
+        variant =
+            "SendMachineConfiguration"
+    in
+    Encode.object [ ( variant, Encode.object [ ( "name", Encode.string name ), ( "bytes", Encode.array Encode.int bytes ) ] ) ]
         |> backendPort
 
+
+selectRemoteMachineConfiguration : String -> Cmd msg
+selectRemoteMachineConfiguration machine =
+    let
+        variant : String
+        variant =
+            "SelectMachineConfiguration"
+    in
+    Encode.object [ ( variant, Encode.string machine ) ]
+        |> backendPort
+
+
+startProgram : Int -> Cmd msg
+startProgram index =
+    let
+        variant : String
+        variant =
+            "StartProgram"
+    in
+    Encode.object [ ( variant, Encode.int index ) ]
+        |> backendPort
+
+
+stopProgram : Cmd msg
+stopProgram =
+    let
+        variant : String
+        variant =
+            "Stop"
+    in
+    Encode.string variant
+        |> backendPort
 
 
 decodeEvent : Decode.Decoder a -> Encode.Value -> Result Decode.Error a

@@ -16,36 +16,20 @@ import Element.Input as Input
 import FontAwesome.Icon as FAIcon
 import FontAwesome.Solid as SolidIcons
 import FontAwesome.Svg as FontAwesomeSvg
-import Framework.Card as Card
 import Html
 import Html.Attributes as Attributes
 import Html.Events
-import Round
 import Widget as Widget
 import Widget.Icon as Icon
 import Widget.Material as Material
-
-
-type alias DrawerConfig msg =
-    { context : Context
-    , selected : Maybe Int
-    , back : msg
-    , goToRemoteControl : msg
-    , goToConfig : Maybe msg
-    , selectedCycle : Maybe Int
-    , cyclesExpanded : Bool
-    , toggleCycles : Bool -> msg
-    , cycles : List String
-    , goToCycle : Int -> msg
-    }
 
 
 
 -- PARAMETER VIEW
 
 
-parameter : Context -> a -> b -> (Parameter a b -> msg) -> Int -> Parameter a b -> Ui.Element msg
-parameter context db parmac msg _ par =
+parameter : db -> info -> Context -> (Parameter db info -> msg) -> Int -> Parameter db info -> Ui.Element msg
+parameter db parmac context msg _ par =
     Ui.column [ Ui.width Ui.fill, Ui.spacing 8 ]
         [ Ui.row
             [ Ui.width Ui.fill
@@ -73,20 +57,20 @@ type ParameterModificationData
     | PriceParameter String
 
 
-parameterModificationData : a -> b -> Context -> Parameter a b -> ParameterModificationData
-parameterModificationData db b context ({ ui, get, format } as par) =
+parameterModificationData : db -> info -> Context -> Parameter db info -> ParameterModificationData
+parameterModificationData db info context ({ ui, get, format } as par) =
     case ui of
         Parameter.Number ->
             NumberParameter (String.fromInt <| get db)
 
         Parameter.Option ->
-            OptionParameter (Parameter.indexToOption b context par <| get db)
+            OptionParameter (Parameter.indexToOption info context par <| get db)
 
         Parameter.Price ->
-            PriceParameter (format b context <| get db)
+            PriceParameter (format info context <| get db)
 
 
-parameterModificationValue : Parameter a b -> b -> Context -> ParameterModificationData -> Int -> Maybe Int
+parameterModificationValue : Parameter db info -> info -> Context -> ParameterModificationData -> Int -> Maybe Int
 parameterModificationValue par b context data priceMultiplier =
     case data of
         NumberParameter string ->
@@ -128,20 +112,20 @@ validateParameterInput text data =
 
 
 parameterModificationDialog :
-    { b : b
+    { info : info
     , context : Context
     , textChange : String -> msg
     , dismiss : msg
-    , confirm : Parameter a b -> Int -> msg
+    , confirm : Parameter db info -> Int -> msg
     , modData : ParameterModificationData
-    , par : Parameter a b
+    , par : Parameter db info
     , priceMultiplier : Int
     }
     -> Ui.Element msg
-parameterModificationDialog { b, context, textChange, dismiss, confirm, modData, par, priceMultiplier } =
+parameterModificationDialog { info, context, textChange, dismiss, confirm, modData, par, priceMultiplier } =
     let
         validationResult =
-            parameterModificationValue par b context modData priceMultiplier
+            parameterModificationValue par info context modData priceMultiplier
                 |> Maybe.map (Parameter.validate par)
                 |> Maybe.withDefault (Err Intl.ValoreNonNumerico)
 
@@ -164,7 +148,7 @@ parameterModificationDialog { b, context, textChange, dismiss, confirm, modData,
                                     [ Attributes.selected (text == opt) ]
                                     [ Html.text opt ]
                             )
-                            (Parameter.options b context par)
+                            (Parameter.options info context par)
                             |> Html.select [ Attributes.style "font-size" "inherit", Html.Events.onInput textChange ]
                             |> Ui.html
                         )
@@ -204,10 +188,14 @@ step context parmac toggle selected expanded index s =
         , content =
             WMC.stepParameterMetadataList s.stepType parmac
                 |> List.indexedMap
-                    (parameter context s parmac (selected index))
+                    (parameter s parmac context (selected index))
                 |> List.map Widget.asItem
         }
         |> Widget.itemList (Material.cardColumn Style.palette)
+
+
+
+-- GLOBAL WIDGETS
 
 
 languageSelect : Context -> (String -> msg) -> Ui.Element msg
@@ -222,6 +210,20 @@ languageSelect context msg =
                         [ Html.text <| languageString l ]
                 )
                 [ Italiano, English ]
+
+
+type alias DrawerConfig msg =
+    { context : Context
+    , selected : Maybe Int
+    , back : msg
+    , goToRemoteControl : msg
+    , goToConfig : Maybe msg
+    , selectedCycle : Maybe Int
+    , cyclesExpanded : Bool
+    , toggleCycles : Bool -> msg
+    , cycles : List String
+    , goToCycle : Int -> msg
+    }
 
 
 leftDrawer : DrawerConfig msg -> Ui.Element msg
@@ -343,8 +345,8 @@ ipDialog context available ip msg submit =
         |> Widget.singleModal
 
 
-washTypeImage : Int -> Ui.Element msg
-washTypeImage washType =
+washTypeImage : Int -> Int -> Ui.Element msg
+washTypeImage washType width =
     [ "molto_sporchi_con_prelavaggio_inox"
     , "sporchi_con_prelavaggio_inox"
     , "molto_sporchi_inox"
@@ -355,6 +357,7 @@ washTypeImage washType =
     , "freddo_inox"
     , "lana_inox"
     , "fibre_naturali_inox"
+    , "solo_centrifuga_inox"
     , "solo_centrifuga_inox"
     , "igienizza_cesto_inox"
     , "ammollo_inox"
@@ -367,27 +370,12 @@ washTypeImage washType =
         |> Maybe.withDefault ""
         |> (\src ->
                 Ui.image
-                    [ Ui.alignRight, Ui.width <| Ui.px 160 ]
+                    [ Ui.alignRight, Ui.width <| Ui.px width ]
                     { src = src, description = "Wash type" }
            )
 
 
 
--- REMOTE CONTROL
-
-
-archiveList : List String -> (String -> msg) -> Ui.Element msg
-archiveList archives msg =
-    let
-        archiveOption name =
-            Widget.fullBleedItem (Material.fullBleedItem Style.palette)
-                { onPress = Just <| msg name
-                , icon = always Ui.none
-                , text = name
-                }
-    in
-    List.map archiveOption archives
-        |> Widget.itemList (Material.cardColumn Style.palette)
 
 
 
@@ -396,7 +384,7 @@ archiveList archives msg =
 
 scrollbarYEl : List (Ui.Attribute msg) -> Ui.Element msg -> Ui.Element msg
 scrollbarYEl attrs body =
-    Ui.el [ Ui.height Ui.fill, Ui.width Ui.fill ] <|
+    Ui.el [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.scrollbarY ] <|
         Ui.el
             ([ Ui.htmlAttribute <| Attributes.style "position" "absolute"
              , Ui.htmlAttribute <| Attributes.style "top" "0"

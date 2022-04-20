@@ -62,13 +62,16 @@ update msg { context } ({ config } as model) =
 view : SharedModel a -> Model -> Ui.Element Msg
 view { context } model =
     let
+        parmac =
+            model.config.parmac
+
         modals =
             Maybe.map
                 (\( p, t ) ->
                     [ { onDismiss = Just UnselectParameter
                       , content =
                             AppWidgets.parameterModificationDialog
-                                { b = model.config.parmac
+                                { info = model.config.parmac
                                 , context = context
                                 , textChange = ParameterChange
                                 , dismiss = UnselectParameter
@@ -86,12 +89,12 @@ view { context } model =
     in
     AppWidgets.scrollbarYEl (modals ++ [ Ui.width Ui.fill, Ui.height Ui.fill ]) <|
         Ui.column
-            [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.scrollbarY, Ui.spacing 8 ]
+            [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 8 ]
             [ Ui.paragraph [ Font.size 32 ] [ Ui.text (translate Intl.ParametriMacchina context) ]
             , Input.text [] { onChange = ConfigNameChange, text = model.config.parmac.name, placeholder = Nothing, label = Input.labelHidden "name" }
             , model.config.parmacMetadata
                 |> List.indexedMap
-                    (AppWidgets.parameter context model.config.parmac model.config.parmac SelectParameter)
+                    (AppWidgets.parameter parmac parmac context SelectParameter)
                 |> List.map Widget.asItem
                 |> Widget.itemList (Material.cardColumn Style.palette)
             ]

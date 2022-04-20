@@ -2,12 +2,12 @@ use super::discovery;
 use super::prefs;
 use super::prefs::AppPreferences;
 use super::washing_machine as ws;
-use super::washing_machine::WashingMachineConnection;
 use futures::future::FutureExt;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde_json;
 use serde_json::json;
 use std::sync::mpsc;
+use std::thread;
 use std::time::{Duration, Instant};
 use tauri::Window;
 use tokio::runtime::Runtime;
@@ -15,24 +15,27 @@ use tokio::runtime::Runtime;
 #[derive(Clone, serde::Deserialize)]
 enum BackEndPortMessage {
   Refresh,
-  Preferences(AppPreferences),
-  SearchMachines,
   WashingMachineHttpConnect(String),
+  SearchMachines,
+  Preferences(AppPreferences),
   SendMachineConfiguration { name: String, bytes: Vec<u8> },
-  GetRemoteMachineConfiguration(String),
-}
-
-enum Message {
-  ConnectTo(String),
-  Refresh,
-  UdpDiscovery,
-  SendMachineConfiguration(String, Vec<u8>),
-  GetRemoteMachineConfiguration(String),
+  GetMachineConfiguration(String),
+  SelectMachineConfiguration(String),
+  StartProgram(u16),
+  Stop,
 }
 
 pub fn task(window: Window) {
   fn emit_update(window: &Window, state: impl serde::Serialize) {
+    debug!("update {}", serde_json::ser::to_string(&state).unwrap());
     window.emit("stateUpdate", state).unwrap();
+  }
+
+  fn send_state(connection: &Option<Box<dyn ws::WashingMachineConnection>>, window: &Window) {
+    match connection {
+      Some(ref connection) => emit_update(window, connection.get_connection_state()),
+      None => emit_update(&window, json!("null")),
+    };
   }
 
   let rt = Runtime::new().expect("Failed to build pool");
@@ -47,43 +50,15 @@ pub fn task(window: Window) {
   }
 
   let timeout = Duration::from_millis(100);
-  let (tx, rx) = mpsc::channel::<Message>();
+  let (tx, rx) = mpsc::channel::<BackEndPortMessage>();
 
   let tx_clone = tx.clone();
   window.listen("backendPort", move |event| {
     if let Some(str) = event.payload() {
-      use BackEndPortMessage::*;
       match serde_json::from_str::<BackEndPortMessage>(str) {
-        Ok(message) => match message {
-          Refresh => {
-            tx_clone.send(Message::Refresh).ok();
-          }
-          Preferences(prefs) => {
-            info!("Saving user preferences: {:?}", prefs);
-            prefs::set_usage_preferences(prefs.language, prefs.machine);
-          }
-          SearchMachines => {
-            info!("Searching for machines...");
-            tx_clone.send(Message::UdpDiscovery).ok();
-          }
-          WashingMachineHttpConnect(ip) => {
-            tx_clone.send(Message::ConnectTo(ip)).ok();
-          }
-          SendMachineConfiguration { name, bytes } => {
-            tx_clone
-              .send(Message::SendMachineConfiguration(
-                String::from(name.trim_end_matches(char::from(0))),
-                bytes,
-              ))
-              .ok();
-          }
-
-          GetRemoteMachineConfiguration(archive) => {
-            tx_clone
-              .send(Message::GetRemoteMachineConfiguration(archive))
-              .ok();
-          }
-        },
+        Ok(message) => {
+          tx_clone.send(message).ok();
+        }
         Err(e) => panic!("Error while parsing json from port: {}\n--> {:?}", str, e),
       };
     } else {
@@ -96,20 +71,22 @@ pub fn task(window: Window) {
   let mut update_ts = Instant::now();
 
   loop {
-    use Message::*;
+    use BackEndPortMessage::*;
     match rx.recv_timeout(timeout) {
-      Ok(ConnectTo(ip)) => {
+      Ok(WashingMachineHttpConnect(ip)) => {
         info!("connecting...");
         let http_connection = ws::http::WashingMachineHttpConnection::new(ip);
-        emit_update(&window, http_connection.get_connection_state());
         connection = Some(Box::new(http_connection));
+        send_state(&connection, &window);
         update_ts = Instant::now();
       }
-      Ok(Refresh) => match connection {
-        Some(ref connection) => emit_update(&window, connection.get_connection_state()),
-        None => emit_update(&window, json!("null")),
-      },
-      Ok(UdpDiscovery) => {
+      Ok(Refresh) => send_state(&connection, &window),
+      Ok(Preferences(prefs)) => {
+        info!("Saving user preferences: {:?}", prefs);
+        prefs::set_usage_preferences(prefs.language, prefs.machine);
+      }
+      Ok(SearchMachines) => {
+        info!("Searching for machines...");
         let closure_window = window.clone();
         rt.spawn(discovery::poll().then(|res| async move {
           match res {
@@ -122,40 +99,74 @@ pub fn task(window: Window) {
           }
         }));
       }
-      Ok(SendMachineConfiguration(name, bytes)) => {
-        if let Some(ref mut connection) = connection {
-          match connection.send_machine_configuration(name, &bytes[..]) {
-            Ok(_) => {
-              println!("Tutto okk");
-            }
-            Err(e) => {
-              warn!("Error: {}", e);
-              //TODO: send error to the ui
-            }
-          };
-        }
+      Ok(SendMachineConfiguration { name, bytes }) => {
+        match connection.as_ref().unwrap().send_machine_configuration(
+          String::from(name.trim_end_matches(char::from(0))),
+          bytes.into(),
+        ) {
+          Ok(_) => {
+            println!("Tutto okk");
+          }
+          Err(e) => {
+            warn!("Error: {}", e);
+            //TODO: send error to the ui
+          }
+        };
       }
-      Ok(GetRemoteMachineConfiguration(archive)) => {
-        if let Some(ref mut connection) = connection {
-          match connection.get_machine_configuration(archive) {
-            Ok(bytes) => {
-              window.emit("remoteMachineLoaded", bytes).ok();
-            }
-            Err(e) => {
-              warn!("Error: {}", e);
-              //TODO: send error to the ui
-            }
-          };
-        }
+      Ok(GetMachineConfiguration(archive)) => {
+        match connection
+          .as_ref()
+          .unwrap()
+          .get_machine_configuration(archive)
+        {
+          Ok(bytes) => {
+            window.emit("remoteMachineLoaded", bytes).ok();
+          }
+          Err(e) => {
+            warn!("Error: {}", e);
+            //TODO: send error to the ui
+          }
+        };
       }
+
+      Ok(SelectMachineConfiguration(archive)) => {
+        match connection
+          .as_ref()
+          .unwrap()
+          .select_machine_configuration(archive)
+        {
+          Ok(()) => {
+            info!("tutto okkkk");
+            thread::sleep(Duration::from_millis(250));
+            connection
+              .as_deref_mut()
+              .unwrap()
+              .refresh_configuration_archive();
+            send_state(&connection, &window);
+          }
+          Err(e) => {
+            warn!("Error: {}", e);
+            //TODO: send error to the ui
+          }
+        };
+      }
+
+      Ok(StartProgram(program)) => {
+        connection.as_deref_mut().unwrap().start_program(program);
+      }
+
+      Ok(Stop) => {
+        connection.as_deref_mut().unwrap().stop();
+      }
+
       Err(mpsc::RecvTimeoutError::Disconnected) => error!("Disconnected from queue!"),
       Err(mpsc::RecvTimeoutError::Timeout) => (),
     }
 
-    if let Some(ref mut connection) = connection {
-      if update_ts.elapsed() > Duration::new(2, 0) {
-        connection.refresh_state();
-        emit_update(&window, connection.get_connection_state());
+    if let Some(ref mut unwrapped_connection) = connection {
+      if update_ts.elapsed() > Duration::new(1, 0) {
+        unwrapped_connection.refresh_state();
+        send_state(&connection, &window);
         update_ts = Instant::now();
       }
     }

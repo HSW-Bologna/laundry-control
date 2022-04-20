@@ -388,7 +388,7 @@ view { context } { focused, index, cycle, parmac, priceString, removeDialog, rem
                             [ { onDismiss = Just UnselectParameter
                               , content =
                                     AppWidgets.parameterModificationDialog
-                                        { b = parmac
+                                        { info = parmac
                                         , context = context
                                         , textChange = ParameterChange
                                         , dismiss = UnselectParameter
@@ -419,7 +419,7 @@ view { context } { focused, index, cycle, parmac, priceString, removeDialog, rem
                 ]
     in
     AppWidgets.scrollbarYEl (modals ++ [ Ui.width Ui.fill, Ui.height Ui.fill ]) <|
-        Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.scrollbarY, Ui.spacingXY 0 16 ]
+        Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacingXY 0 16 ]
             ([ Ui.row [ Ui.width Ui.fill, Ui.spacing 32 ]
                 [ Ui.column [ Ui.width Ui.fill, Ui.spacing 8 ]
                     [ Input.text [ Ui.alignLeft, Ui.width Ui.fill ]
@@ -444,7 +444,7 @@ view { context } { focused, index, cycle, parmac, priceString, removeDialog, rem
                 ]
              , Ui.row [ Ui.width Ui.fill, Ui.spacing 32, Ui.paddingEach { top = 0, bottom = 0, left = 0, right = 32 } ]
                 [ AppWidgets.stringChoice ChangeType (WMC.washTypesStrings context) cycle.washType |> Ui.el [ Ui.width Ui.fill, Ui.alignLeft ]
-                , AppWidgets.washTypeImage cycle.washType
+                , AppWidgets.washTypeImage cycle.washType 160
                 ]
              , Style.br
              , Ui.el [ Ui.centerX, Ui.paddingEach { top = 0, left = 16, right = 16, bottom = 32 } ] <|
