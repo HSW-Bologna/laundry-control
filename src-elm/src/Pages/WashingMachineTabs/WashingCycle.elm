@@ -161,7 +161,6 @@ update msg { context } ({ cycle, index, parmac } as model) =
             )
 
         ConfigNameChange name ->
-            -- TODO: limita la dimensione a 32 caratteri
             ( { model | cycle = changeWashCycleName name context.language cycle }, None )
 
         ChangeType selected ->
@@ -254,6 +253,7 @@ update msg { context } ({ cycle, index, parmac } as model) =
                 , cycle =
                     { cycle | steps = Array.insertAt newStepIndex step cycle.steps }
                 , expandedSteps = resize model.expandedSteps (newStepIndex + 1) |> Array.insertAt newStepIndex False
+                , focused = Just newStepIndex
               }
             , None
             )
@@ -419,7 +419,7 @@ view { context } { focused, index, cycle, parmac, priceString, removeDialog, rem
                 ]
     in
     AppWidgets.scrollbarYEl (modals ++ [ Ui.width Ui.fill, Ui.height Ui.fill ]) <|
-        Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacingXY 0 16 ]
+        Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacingXY 0 16, Ui.scrollbarY ]
             ([ Ui.row [ Ui.width Ui.fill, Ui.spacing 32 ]
                 [ Ui.column [ Ui.width Ui.fill, Ui.spacing 8 ]
                     [ Input.text [ Ui.alignLeft, Ui.width Ui.fill ]
@@ -451,7 +451,12 @@ view { context } { focused, index, cycle, parmac, priceString, removeDialog, rem
                 Widget.button (Material.containedButton Style.palette)
                     { text = translate Intl.NuovoPasso context
                     , icon = SolidIcons.plus |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
-                    , onPress = Just AskNewStep
+                    , onPress =
+                        if Array.length cycle.steps < 36 then
+                            Just AskNewStep
+
+                        else
+                            Nothing
                     }
              ]
                 ++ (cycle.steps

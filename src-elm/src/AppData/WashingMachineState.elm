@@ -9,12 +9,29 @@ import Json.Decode.Pipeline as Pipeline
 type StateCode
     = Running
     | Stopped
+    | Paused
+    | ForcedDrain
+    | Braking
 
 
 type alias State =
     { name : String
     , state : StateCode
+    , credit : Int
+    , cycleNumber : Int
+    , stepType : Int
+    , stepNumber : Int
+    , alarmCode : Int
+    , portholeOpen : Bool
+    , cycleRemaining : Int
+    , stepRemaining : Int
+    , stepCount : Int
+    , sensors : Sensors
     }
+
+
+type alias Sensors =
+    { temperature : Int, level : Int, speed : Int }
 
 
 type alias ProgramPreview =
@@ -34,7 +51,7 @@ type alias Configuration =
 type ConnectionState
     = Disconnected
     | Connected State Configuration
-    | Error String
+    | Error
 
 
 connectionStateUpdateDecoder : Decode.Decoder ConnectionState
@@ -48,14 +65,36 @@ connectionStateUpdateDecoder =
                     (Decode.map
                         (\i ->
                             case i of
+                                0 ->
+                                    Stopped
+
                                 1 ->
                                     Running
+
+                                2 ->
+                                    Paused
+
+                                3 ->
+                                    ForcedDrain
+
+                                6 ->
+                                    Braking
 
                                 _ ->
                                     Stopped
                         )
                         Decode.int
                     )
+                |> Pipeline.required "credit" Decode.int
+                |> Pipeline.required "cycle" Decode.int
+                |> Pipeline.required "step_code" Decode.int
+                |> Pipeline.required "step_number" Decode.int
+                |> Pipeline.required "alarm_code" Decode.int
+                |> Pipeline.required "porthole_open" Decode.bool
+                |> Pipeline.required "cycle_remaining" Decode.int
+                |> Pipeline.required "step_remaining" Decode.int
+                |> Pipeline.required "step_count" Decode.int
+                |> Pipeline.custom (Decode.map3 Sensors (Decode.field "temperature" Decode.int) (Decode.field "level" Decode.int) (Decode.field "speed" Decode.int))
 
         programPreviewDecoder : Decode.Decoder ProgramPreview
         programPreviewDecoder =
@@ -73,9 +112,16 @@ connectionStateUpdateDecoder =
     in
     Decode.oneOf
         [ Decode.null Disconnected
-        , Decode.succeed Error
-            |> Pipeline.required "Error" Decode.string
         , Decode.succeed Connected
             |> Pipeline.requiredAt [ "Connected", "state" ] washingMachineStateDecoder
             |> Pipeline.requiredAt [ "Connected", "configuration" ] configurationDecoder
+        , Decode.andThen
+            (\s ->
+                if s == "Error" then
+                    Decode.succeed Error
+
+                else
+                    Decode.fail "Invalid error"
+            )
+            Decode.string
         ]

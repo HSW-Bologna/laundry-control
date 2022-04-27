@@ -34,7 +34,9 @@ AddOption('--release',
           action='store_true',
           help='release build')
 
-elmsrc = Glob(f"{ELMSRC}/src/**/*.elm")
+elmsrc = Glob(f"{ELMSRC}/src/**/**/**/*.elm")
+elmsrc += Glob(f"{ELMSRC}/src/**/**/*.elm")
+elmsrc += Glob(f"{ELMSRC}/src/**/*.elm")
 elmsrc += Glob("{ELMSRC}/src/*.elm")
 
 env.Command(ELM, [], 'npm install elm')

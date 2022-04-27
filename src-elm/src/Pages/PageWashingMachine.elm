@@ -58,6 +58,7 @@ type alias Model =
     , config : Maybe MachineConfiguration
     , snackbar : Snackbar.Snackbar String
     , connectionState : WSS.ConnectionState
+    , sensorsData : Array WSS.Sensors
     , localMachines : List ( IpAddress, String )
     }
 
@@ -78,6 +79,7 @@ init language =
       , snackbar = Snackbar.init
       , connectionState = WSS.Disconnected
       , localMachines = []
+      , sensorsData = Array.empty
       }
     , Cmd.none
     )
@@ -152,6 +154,8 @@ type Msg
     | InsertIpAddress
     | IpAddessChange IpAddress
     | LocalConnectionRequest (Maybe IpAddress)
+    | BackendSnackbarMessage String
+    | RefreshDiscovery
 
 
 port ipAddresses : (Encode.Value -> msg) -> Sub msg
@@ -161,6 +165,9 @@ port stateUpdate : (Encode.Value -> msg) -> Sub msg
 
 
 port remoteMachineLoaded : (Array Int -> msg) -> Sub msg
+
+
+port notificationMessage : (String -> msg) -> Sub msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -195,6 +202,17 @@ update msg model =
 
                 _ ->
                     { m | config = Just config }
+
+        addSensorsData connection m =
+            case connection of
+                WSS.Connected { sensors } _ ->
+                    let
+                        _ = Debug.log "data" m.sensorsData
+                    in
+                    { m | sensorsData = Array.push sensors m.sensorsData |> Array.slice 0 10 }
+
+                _ ->
+                    m
 
         fillTabWithConnection connection m =
             case m.tabModel of
@@ -242,13 +260,23 @@ update msg model =
         ( StateUpdate state, _ ) ->
             case decodeEvent WSS.connectionStateUpdateDecoder state of
                 Ok res ->
-                    ( model |> fillTabWithConnection res, Cmd.none )
+                    ( model |> fillTabWithConnection res |> addSensorsData res, Cmd.none )
 
                 Err error ->
                     ( newRawMessage (Decode.errorToString error) model, Cmd.none )
 
+        ( BackendSnackbarMessage string, _ ) ->
+            ( Intl.codeFromString string
+                |> Maybe.map (\message -> newMessage message model)
+                |> Maybe.withDefault model
+            , Cmd.none
+            )
+
         ( InsertIpAddress, _ ) ->
             ( { model | visibleModal = IpInput localhost }, Ports.searchMachines )
+
+        ( RefreshDiscovery, _ ) ->
+            ( { model | localMachines = [] }, Ports.searchMachines )
 
         ( IpAddessChange ip, _ ) ->
             ( { model | visibleModal = IpInput ip }, Cmd.none )
@@ -425,6 +453,7 @@ subscriptions _ =
         , stateUpdate StateUpdate
         , ipAddresses IpAddresses
         , remoteMachineLoaded StupidElmMachineLoaded
+        , notificationMessage BackendSnackbarMessage
         ]
 
 
@@ -499,7 +528,7 @@ view model =
                     []
 
                 IpInput ip ->
-                    AppWidgets.ipDialog model.context model.localMachines ip IpAddessChange LocalConnectionRequest
+                    AppWidgets.ipDialog model.context model.localMachines ip IpAddessChange LocalConnectionRequest RefreshDiscovery
 
         cycles =
             Maybe.map

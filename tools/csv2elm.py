@@ -90,6 +90,7 @@ def main(indir, outdir):
 
             intl_string_type = "type IntlString\n"
             translate_fun = "translate : Language -> IntlString -> String\ntranslate language intlString =\n    case intlString of\n"
+            code_fun = "codeFromString : String -> Maybe IntlString\ncodeFromString code =\n    case code of\n"
             first = True
 
             for filename, value in translations.items():
@@ -109,14 +110,19 @@ def main(indir, outdir):
                         intl_string_type += f"    | {cap(enum)}\n"
 
                     translate_fun += f"        {cap(enum)} ->\n            getTranslation language <| Translation"
+                    code_fun += f"        \"{cap(enum)}\" ->\n            Just {cap(enum)}\n\n"
                     for translation in value[enum]:
                         escaped = translation.replace("\"", "\\\"")
                         translate_fun += f" \"{escaped}\""
                     translate_fun += "\n\n"
 
+                code_fun += "        _ ->\n            Nothing\n\n"
+
                 elm.write(intl_string_type)
                 elm.write("\n\n")
                 elm.write(translate_fun)
+                elm.write("\n\n")
+                elm.write(code_fun)
 
     except EnvironmentError as e:
         print(e)

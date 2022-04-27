@@ -199,7 +199,9 @@ boolOptions =
 parameterMetadataList : List MachineParameter
 parameterMetadataList =
     let
-        colorOptions = [Intl.Spento, Intl.Blu, Intl.Verde, Intl.Azzurro, Intl.Rosso, Intl.Viola, Intl.Giallo, Intl.Bianco]
+        colorOptions =
+            [ Intl.Spento, Intl.Blu, Intl.Verde, Intl.Azzurro, Intl.Rosso, Intl.Viola, Intl.Giallo, Intl.Bianco ]
+
         uiOptions =
             [ Intl.Self, Intl.Laboratorio ]
 
@@ -213,7 +215,7 @@ parameterMetadataList =
     , { get = .nodeCode, set = \v p -> { p | nodeCode = v }, min = 0, max = 255, default = 0, description = Intl.CodiceNodoMacchina, format = formatNumber, ui = Parameter.Number }
     , { get = .machineModel, set = \v p -> { p | machineModel = v }, min = 0, max = 255, default = 255, description = Intl.ModelloMacchina, format = formatNumber, ui = Parameter.Number }
     , { get = .machineSubModel, set = \v p -> { p | machineSubModel = v }, min = 0, max = 255, default = 255, description = Intl.SottomodelloMacchina, format = formatNumber, ui = Parameter.Number }
-    , { get = .accessLevel, set = \v p -> { p | accessLevel = v }, min = 0, max = 3, default = 0, description = Intl.LivelloDiAccesso, format = formatNumber, ui = Parameter.Number }
+    , { get = .accessLevel, set = \v p -> { p | accessLevel = v }, min = 0, max = 3, default = 0, description = Intl.LivelloDiAccesso, format = formatOption [Intl.Utente, Intl.Tecnico, Intl.Distributore, Intl.Costruttore], ui = Parameter.Option }
     , { get = .stopUi, set = \v p -> { p | stopUi = v }, min = 0, max = 1, default = 0, description = Intl.InterfacciaDaFermo, format = formatOption uiOptions, ui = Parameter.Option }
     , { get = .startUi, set = \v p -> { p | startUi = v }, min = 0, max = 1, default = 0, description = Intl.InterfacciaInFunzionamento, format = formatOption uiOptions, ui = Parameter.Option }
     , { get = .maxPrograms, set = \v p -> { p | maxPrograms = v }, min = 0, max = 100, default = 100, description = Intl.NumeroMassimoDiProgrammi, format = formatNumber, ui = Parameter.Number }
@@ -278,10 +280,10 @@ parameterMetadataList =
     , { get = .accelerometerDelta, set = \v p -> { p | accelerometerDelta = v }, min = 0, max = 100, default = 50, description = Intl.DeltaAccelerometro, format = formatNumber, ui = Parameter.Number }
     , { get = .accelerometerWaitTime, set = \v p -> { p | accelerometerWaitTime = v }, min = 0, max = 60, default = 20, description = Intl.TempoDiAttesaDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .accelerometerDrainTime, set = \v p -> { p | accelerometerDrainTime = v }, min = 0, max = 1000, default = 20, description = Intl.TempoDiScaricoDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM "°C", ui = Parameter.Number }
-    , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM "°C", ui = Parameter.Number }
-    , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM "°C", ui = Parameter.Number }
-    , { get = .termodegratationTemperature, set = \v p -> { p | termodegratationTemperature = v }, min = 0, max = 60, default = 45, description = Intl.TemperaturaDiTermodegradazione, format = formatWithUM "°C", ui = Parameter.Number }
+    , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
+    , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
+    , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
+    , { get = .termodegratationTemperature, set = \v p -> { p | termodegratationTemperature = v }, min = 0, max = 60, default = 45, description = Intl.TemperaturaDiTermodegradazione, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
     , { get = .levelType, set = \v p -> { p | levelType = v }, min = 0, max = 2, default = 0, description = Intl.TipoLivello, format = formatOption [ Intl.Centimetri, Intl.UnContalitri, Intl.DueContalitri ], ui = Parameter.Option }
     , { get = .levelHysteresisTime, set = \v p -> { p | levelHysteresisTime = v }, min = 1, max = 60, default = 3, description = Intl.TempoDiIsteresiLivello, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .cmMaxLevel, set = \v p -> { p | cmMaxLevel = v }, min = 2, max = 100, default = 48, description = Intl.CentimetriLivelloMassimo, format = formatWithUM "cm", ui = Parameter.Number }
@@ -310,7 +312,7 @@ parameterMetadataList =
     , { get = .rampMaximumTime, set = \v p -> { p | rampMaximumTime = v }, min = 3, max = 1000, default = 90, description = Intl.TempoMassimoDellaRampa, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
     , { get = .minSecEnable, set = \v p -> { p | minSecEnable = v }, min = 0, max = 1, default = 0, description = Intl.AbilitazioneDelCambioMinutiSecondi, format = formatOption boolOptions, ui = Parameter.Option }
-    , { get = .lockType, set = \v p -> { p | lockType = v }, min = 0, max = 3, default = 0, description = Intl.TipoDiSerratura, format = formatOption [Intl.NuovaTreMicroLivello, Intl.BobinaUnMicroLivello, Intl.NuovaTreMicroNoLivello, Intl.BobinaUnMicroNoLivello], ui = Parameter.Option }
+    , { get = .lockType, set = \v p -> { p | lockType = v }, min = 0, max = 3, default = 0, description = Intl.TipoDiSerratura, format = formatOption [ Intl.NuovaTreMicroLivello, Intl.BobinaUnMicroLivello, Intl.NuovaTreMicroNoLivello, Intl.BobinaUnMicroNoLivello ], ui = Parameter.Option }
     , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
     , { get = .lockPulse, set = \v p -> { p | lockPulse = v }, min = 5, max = 30, default = 8, description = Intl.DurataDellImpulsoDellaSerratura, format = formatNumber, ui = Parameter.Number }
     , { get = .alarmInhibition, set = \v p -> { p | alarmInhibition = v }, min = 0, max = 1, default = 0, description = Intl.InibizioneAllarmi, format = formatOption boolOptions, ui = Parameter.Option }
@@ -377,7 +379,7 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .heating, set = \v p -> { p | heating = v }, min = 0, max = 1, default = 0, description = Intl.Riscaldamento, format = formatOption boolOptions, ui = Parameter.Option }
 
         temperature =
-            { get = .temperature, set = \v p -> { p | temperature = v }, min = 0, max = maxTemperature, default = 0, description = Intl.Temperatura, format = formatWithUM "°C", ui = Parameter.Number }
+            { get = .temperature, set = \v p -> { p | temperature = v }, min = 0, max = maxTemperature, default = 0, description = Intl.Temperatura, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
 
         heatingType =
             { get = .heatingType, set = \v p -> { p | heatingType = v }, min = 0, max = 1, default = 1, description = Intl.TipoDiRiscaldamento, format = formatOption [ Intl.Diretto, Intl.Indiretto ], ui = Parameter.Option }
@@ -558,7 +560,7 @@ resetToDefaults config =
 
 changeName : String -> MachineConfiguration -> MachineConfiguration
 changeName name ({ parmac } as config) =
-    { config | parmac = { parmac | name = name } }
+    { config | parmac = { parmac | name = String.slice 0 32 name } }
 
 
 default : Context -> MachineConfiguration
@@ -935,7 +937,7 @@ newWashingCycle index =
 
 changeWashCycleName : String -> Language -> WashingCycle -> WashingCycle
 changeWashCycleName name lang cycle =
-    { cycle | name = setTranslation cycle.name lang name }
+    { cycle | name = setTranslation cycle.name lang (String.slice 0 32 name) }
 
 
 washTypesStrings : Context -> List String
@@ -979,7 +981,7 @@ washStepTypeToString context stepType =
     washStepStrings context
         |> Array.fromList
         |> Array.get (stepType - 1)
-        |> Maybe.withDefault "Error"
+        |> Maybe.withDefault ""
 
 
 defaultWashStep : Int -> Bool -> WashingStep

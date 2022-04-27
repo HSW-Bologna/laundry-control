@@ -39,7 +39,6 @@ update : Msg -> SharedModel a -> Model -> Model
 update msg { context } ({ config } as model) =
     case msg of
         ConfigNameChange name ->
-            -- TODO: limita la dimensione a 32 caratteri
             { model | config = changeName name config }
 
         SelectParameter par ->
@@ -89,7 +88,7 @@ view { context } model =
     in
     AppWidgets.scrollbarYEl (modals ++ [ Ui.width Ui.fill, Ui.height Ui.fill ]) <|
         Ui.column
-            [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 8 ]
+            [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.scrollbarY, Ui.spacing 8 ]
             [ Ui.paragraph [ Font.size 32 ] [ Ui.text (translate Intl.ParametriMacchina context) ]
             , Input.text [] { onChange = ConfigNameChange, text = model.config.parmac.name, placeholder = Nothing, label = Input.labelHidden "name" }
             , model.config.parmacMetadata

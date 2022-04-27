@@ -1,4 +1,5 @@
 use super::{Configuration, ConnectionState, State, WashingMachineConnection};
+use super::{Error, Result as WSResult};
 use reqwest;
 use reqwest::blocking::{Client, ClientBuilder};
 use urlencoding::encode;
@@ -31,33 +32,37 @@ impl WashingMachineHttpConnection {
         configuration,
       })
     }) {
-      Ok(state) => state,
-      Err(e) => ConnectionState::Error(e),
+      Ok(state) => {
+        log::info!("First connection successful");
+        state
+      }
+      Err(_) => {
+        log::warn!("First connection failed");
+        ConnectionState::Error
+      }
     }
   }
 
-  fn json_get<R: serde::de::DeserializeOwned>(self: &Self, target: &str) -> Result<R, String> {
+  fn json_get<R: serde::de::DeserializeOwned>(self: &Self, target: &str) -> WSResult<R> {
     json_get(&self.ip, &self.agent, target)
   }
 
-  fn post(self: &Self, target: &str) -> Result<(), String> {
+  fn post(self: &Self, target: &str) -> reqwest::Result<()> {
     self
       .agent
       .post(format!("http://{}/{}", self.ip, target).as_str())
       .header("Connection", "close")
       .send()
-      .map_err(|e| err2str(e))
       .map(|_| ())
   }
 
-  fn post_json<T: serde::Serialize>(self: &Self, target: &str, data: &T) -> Result<(), String> {
+  fn post_json<T: serde::Serialize>(self: &Self, target: &str, data: &T) -> reqwest::Result<()> {
     self
       .agent
       .post(format!("http://{}/{}", self.ip, target).as_str())
       .header("Connection", "close")
       .json(data)
       .send()
-      .map_err(|e| err2str(e))
       .map(|_| ())
   }
 }
@@ -66,7 +71,7 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
   fn refresh_state(self: &mut Self) {
     use ConnectionState::*;
     self.connection_state = match self.connection_state.clone() {
-      Error(_) => Self::first_connection(&self.ip, &self.agent),
+      Error => Self::first_connection(&self.ip, &self.agent),
       Connected {
         state: _,
         configuration,
@@ -75,7 +80,7 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
           state,
           configuration,
         },
-        Err(e) => Error(e),
+        Err(_) => Error,
       },
     };
   }
@@ -83,7 +88,7 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
   fn refresh_configuration_archive(self: &mut Self) {
     use ConnectionState::*;
     self.connection_state = match self.connection_state.clone() {
-      Error(_) => Self::first_connection(&self.ip, &self.agent),
+      Error => Self::first_connection(&self.ip, &self.agent),
       Connected {
         state,
         configuration: _,
@@ -92,39 +97,41 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
           state,
           configuration,
         },
-        Err(e) => Error(e),
+        Err(_) => Error,
       },
     };
   }
 
-  fn send_machine_configuration(self: &Self, archive: String, data: Vec<u8>) -> Result<(), String> {
+  fn send_machine_configuration(self: &Self, archive: String, data: Vec<u8>) -> WSResult<()> {
     self
       .agent
       .post(format!("http://{}/machine/{}", &self.ip, encode(archive.as_str())).as_str())
       .body(data)
       .send()
+      .map_err(|_| Error::Network)
       .map(|_| ())
-      .map_err(|e| err2str(e))
   }
 
-  fn select_machine_configuration(self: &Self, archive: String) -> Result<(), String> {
-    self.post(format!("select_machine/{}", encode(archive.as_str())).as_str())
+  fn select_machine_configuration(self: &Self, archive: String) -> WSResult<()> {
+    self
+      .post(format!("select_machine/{}", encode(archive.as_str())).as_str())
+      .map_err(|_| Error::Network)
   }
 
-  fn get_machine_configuration(self: &Self, archive: String) -> Result<Vec<u8>, String> {
+  fn get_machine_configuration(self: &Self, archive: String) -> WSResult<Vec<u8>> {
     let mut resp = self
       .agent
       .get(format!("http://{}/machine/{}", &self.ip, encode(archive.as_str())).as_str())
       .send()
-      .map_err(|e| err2str(e))?;
+      .map_err(|_| Error::Network)?;
 
     if let Some(header) = resp.headers().get("Content-Length") {
       let len = header.len();
       let mut bytes: Vec<u8> = Vec::with_capacity(len);
-      resp.copy_to(&mut bytes).map_err(|e| err2str(e))?;
+      resp.copy_to(&mut bytes).map_err(|_| Error::Protocol)?;
       Ok(bytes)
     } else {
-      Err("No content length".into())
+      Err(Error::Protocol)
     }
   }
 
@@ -132,15 +139,22 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
     self.connection_state.clone()
   }
 
-  fn stop(self: &Self) -> Result<(), String> {
-    self.post("stop")
+  fn restart(self: &Self) -> WSResult<()> {
+    self.post("start").map_err(|_| Error::Network)
   }
 
-  fn start_program(self: &Self, program: u16) -> Result<(), String> {
-    self.post_json(
-      "start",
-      &serde_json::json!({"cycle" : program}),
-    )
+  fn pause(self: &Self) -> WSResult<()> {
+    self.post("pause").map_err(|_| Error::Network)
+  }
+
+  fn stop(self: &Self) -> WSResult<()> {
+    self.post("stop").map_err(|_| Error::Network)
+  }
+
+  fn start_program(self: &Self, program: u16) -> WSResult<()> {
+    self
+      .post_json("start", &serde_json::json!({ "cycle": program }))
+      .map_err(|_| Error::Network)
   }
 }
 
@@ -148,16 +162,24 @@ fn json_get<R: serde::de::DeserializeOwned>(
   ip: &String,
   agent: &Client,
   target: &str,
-) -> Result<R, String> {
-  let json_response = agent
+) -> WSResult<R> {
+  let json_response = match agent
     .get(format!("http://{}/{}", ip, target).as_str())
     .send()
-    .map_err(|e| err2str(e))?
-    .json::<serde_json::Value>()
-    .map_err(|e| err2str(e))?;
-  serde_json::from_value::<R>(json_response).map_err(|e| String::from(format!("{:?}", e)))
-}
+    .and_then(|resp| resp.json::<serde_json::Value>())
+  {
+    Ok(json_response) => Ok(json_response),
+    Err(e) => {
+      log::warn!("Json GET error: {:?}", e);
+      Err(Error::Network)
+    }
+  }?;
 
-fn err2str(err: impl std::fmt::Debug) -> String {
-  String::from(format!("{:?}", err))
+  match serde_json::from_value::<R>(json_response.clone()) {
+    Ok(value) => Ok(value),
+    Err(e) => {
+      log::warn!("Invalid JSON: {:?} ({})", e, json_response.clone());
+      Err(Error::Protocol)
+    }
+  }
 }

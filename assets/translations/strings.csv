@@ -176,7 +176,7 @@ SbloccoGettoniera, Sblocco gettoniera, Coin acceptor unlocking
 TempoDiAccettazioneDelTastoPausa, Tempo di accettazione del tasto pausa, Seconds of press delay for the pause button
 TempoDiAccettazioneDelTastoStop, Tempo di accettazione del tasto stop, Seconds of press delay for the stop button
 TempoDiAllarmeNoRiempimento, Tempo di allarme "no riempimento", "No fillup" alarm time
-TempoDiAllarmeNoRiscaldamento, Tempo di allarme "no riscaldamento, "No heating" alarm time
+TempoDiAllarmeNoRiscaldamento, Tempo di allarme "no riscaldamento", "No heating" alarm time
 TempoDiAllarmeNoScarico, Tempo di allarme "no scarico", "No drain" alarm time
 TempoDiAttesaDelMicroDelChiavistello, Tempo di attesa del micro del chiavistello, Porthole micro switch delay time
 TempoDiPrecarica, Tempo di precarica, Preload time
@@ -304,3 +304,17 @@ Distributore, Distributore, Distributor
 Costruttore, Costruttore, Manufacturer
 InviaConfigurazione, Invia configurazione, Send configuration
 ConfigurazioneCorrente, Configurazione corrente:, Current configuration:
+ErroreDiRete, Errore di rete, Network error
+Disconnesso, Disconnesso, Disconnected
+Connesso, Connesso, Connected
+ConnessioneFallita, Connessione fallita, Connection failed
+Successo, Successo, Success
+Fallimento, Fallimento, Failure
+ObloAperto, Oblo' aperto, Porthole open
+ObloChiuso, Oblo' chiuso, Porthole closed
+Allarme, Allarme, Alarm
+MacchinaFerma, Macchina ferma, Machine stopped
+LavaggioInCorso, Lavaggio in corso, Washing
+LavaggioInPausa, Lavaggio in pausa, Washing paused
+FrenataInCorso, Frenata in corso, Braking
+ScaricoInCorso, Scarico in corso, Draining

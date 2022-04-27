@@ -3,7 +3,9 @@ port module Ports exposing
     , getRemoteMachineConfiguration
     , navigateHome
     , navigateToPage
+    , pauseProgram
     , preferences
+    , restartProgram
     , searchMachines
     , selectRemoteMachineConfiguration
     , sendRemoteMachineConfiguration
@@ -19,25 +21,8 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 
 
-languageKey : String
-languageKey =
-    "language"
 
-
-machineKey : String
-machineKey =
-    "machine"
-
-
-
--- Communication with the Rust backend
-
-
-port backendPort : Encode.Value -> Cmd msg
-
-
-
--- Communication with the JS backend
+-- COMMUNICATION WITH THE JS BACKEND
 
 
 port navigateTo : { page : String, language : String } -> Cmd msg
@@ -53,9 +38,24 @@ navigateToPage page language =
     navigateTo { page = page, language = languageString language }
 
 
+
+-- COMMUNICATION WITH THE RUST BACKEND
+
+
+port backendPort : Encode.Value -> Cmd msg
+
+
 preferences : { language : String, machine : String } -> Cmd msg
 preferences { language, machine } =
     let
+        languageKey : String
+        languageKey =
+            "language"
+
+        machineKey : String
+        machineKey =
+            "machine"
+
         variant : String
         variant =
             "Preferences"
@@ -128,6 +128,28 @@ startProgram index =
             "StartProgram"
     in
     Encode.object [ ( variant, Encode.int index ) ]
+        |> backendPort
+
+
+restartProgram : Cmd msg
+restartProgram =
+    let
+        variant : String
+        variant =
+            "Restart"
+    in
+    Encode.string variant
+        |> backendPort
+
+
+pauseProgram : Cmd msg
+pauseProgram =
+    let
+        variant : String
+        variant =
+            "Pause"
+    in
+    Encode.string variant
         |> backendPort
 
 

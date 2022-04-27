@@ -13,6 +13,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import FontAwesome.Attributes
 import FontAwesome.Icon as FAIcon
 import FontAwesome.Solid as SolidIcons
 import FontAwesome.Svg as FontAwesomeSvg
@@ -270,7 +271,12 @@ cyclesItems context selected select cycles =
         { selected = selected
         , options =
             List.map (\name -> { text = name, icon = always Ui.none }) cycles
-                ++ [ { text = translate Intl.NuovoProgramma context, icon = SolidIcons.plus |> Icon.elmFontawesome FontAwesomeSvg.viewIcon } ]
+                ++ (if List.length cycles < 100 then
+                        [ { text = translate Intl.NuovoProgramma context, icon = SolidIcons.plus |> Icon.elmFontawesome FontAwesomeSvg.viewIcon } ]
+
+                    else
+                        []
+                   )
         , onSelect = \i -> Just <| select i
         }
 
@@ -290,8 +296,8 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-ipDialog : Context -> List ( IpAddress, String ) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> List (Ui.Attribute msg)
-ipDialog context available ip msg submit =
+ipDialog : Context -> List ( IpAddress, String ) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> msg -> List (Ui.Attribute msg)
+ipDialog context available ip msg submit refresh =
     let
         button text event align =
             Ui.el [ align ] <|
@@ -301,7 +307,7 @@ ipDialog context available ip msg submit =
     , content =
         Ui.el
             (Style.modal 480)
-            (Ui.column [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.spacing 8 ]
+            (Ui.column [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.spacing 16 ]
                 [ Ui.text <|
                     translate Intl.InserisciIp
                         context
@@ -336,7 +342,8 @@ ipDialog context available ip msg submit =
                 , Ui.row
                     [ Ui.alignBottom, Ui.width Ui.fill ]
                     [ button "cancella" (submit Nothing) Ui.alignLeft
-                    , button "conferma" (submit <| Just ip) Ui.alignLeft
+                    , iconButton SolidIcons.recycle refresh "refresh" |> Ui.el [ Ui.centerX ]
+                    , button "conferma" (submit <| Just ip) Ui.alignRight
                     ]
                 ]
             )
@@ -373,9 +380,6 @@ washTypeImage washType width =
                     [ Ui.alignRight, Ui.width <| Ui.px width ]
                     { src = src, description = "Wash type" }
            )
-
-
-
 
 
 
@@ -431,7 +435,7 @@ iconButton icon msg text =
     Widget.iconButton
         (Material.iconButton Style.palette)
         { text = text
-        , icon = icon |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
+        , icon = icon |> Icon.elmFontawesome (FAIcon.viewStyled [ FontAwesome.Attributes.lg ])
         , onPress = Just <| msg
         }
 
