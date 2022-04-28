@@ -126,6 +126,7 @@ view model =
             [ Ui.el [ Ui.alignRight, Ui.alignTop ] (languageSelect model.context ChangeLanguage)
             , Ui.row [ Ui.centerX, Ui.centerY, Ui.spacing 128, Ui.padding 16 ]
                 [ selectionButton (translate Intl.Lavatrice model.context) "PageWashingMachine"
-                , selectionButton (translate Intl.Essicatoio model.context) "PageDryingMachine"
+
+                --, selectionButton (translate Intl.Essicatoio model.context) "PageDryingMachine"
                 ]
             ]

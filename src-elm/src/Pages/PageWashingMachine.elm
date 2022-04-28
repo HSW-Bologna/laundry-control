@@ -59,7 +59,7 @@ type alias Model =
     , snackbar : Snackbar.Snackbar String
     , connectionState : WSS.ConnectionState
     , sensorsData : Array WSS.Sensors
-    , localMachines : List ( IpAddress, String )
+    , localMachines : Maybe (List ( IpAddress, String ))
     }
 
 
@@ -78,7 +78,7 @@ init language =
       , config = Nothing
       , snackbar = Snackbar.init
       , connectionState = WSS.Disconnected
-      , localMachines = []
+      , localMachines = Nothing
       , sensorsData = Array.empty
       }
     , Cmd.none
@@ -87,7 +87,7 @@ init language =
 
 type TabModel
     = MachineConfigurationModel ParMacTab.Model
-    | RemoteControlModel
+    | RemoteControlModel RemControlTab.Model
     | WashCyclesModel WashCycleTab.Model
     | NoTab
 
@@ -118,6 +118,11 @@ fromMachineConfigurationTabModel tabModel model =
     { model | config = Just tabModel.config, tabModel = MachineConfigurationModel tabModel }
 
 
+fromRemoteControlTabModel : ( Model, RemControlTab.Model, Cmd msg ) -> ( Model, Cmd msg )
+fromRemoteControlTabModel ( model, tabModel, cmd ) =
+    ( { model | tabModel = RemoteControlModel tabModel }, cmd )
+
+
 fromWashingCycleTabModel : WashCycleTab.Model -> Model -> Model
 fromWashingCycleTabModel tabModel model =
     let
@@ -129,7 +134,7 @@ fromWashingCycleTabModel tabModel model =
 
 toRemoteControl : TabModel
 toRemoteControl =
-    RemoteControlModel
+    RemoteControlModel RemControlTab.buildModel
 
 
 type Msg
@@ -205,11 +210,19 @@ update msg model =
 
         addSensorsData connection m =
             case connection of
-                WSS.Connected { sensors } _ ->
+                WSS.Connected { sensors } _ _ ->
                     let
-                        _ = Debug.log "data" m.sensorsData
+                        newUnboundedData =
+                            Array.push sensors m.sensorsData
+
+                        newData =
+                            if Array.length newUnboundedData > 60 then
+                                Array.removeAt 0 newUnboundedData
+
+                            else
+                                newUnboundedData
                     in
-                    { m | sensorsData = Array.push sensors m.sensorsData |> Array.slice 0 10 }
+                    { m | sensorsData = newData }
 
                 _ ->
                     m
@@ -252,7 +265,7 @@ update msg model =
                 )
                 value
                 |> Result.toMaybe
-                |> Maybe.map (\ips -> { model | localMachines = ips })
+                |> Maybe.map (\ips -> { model | localMachines = Just ips })
                 |> Maybe.withDefault model
             , Cmd.none
             )
@@ -276,7 +289,7 @@ update msg model =
             ( { model | visibleModal = IpInput localhost }, Ports.searchMachines )
 
         ( RefreshDiscovery, _ ) ->
-            ( { model | localMachines = [] }, Ports.searchMachines )
+            ( { model | localMachines = Nothing }, Ports.searchMachines )
 
         ( IpAddessChange ip, _ ) ->
             ( { model | visibleModal = IpInput ip }, Cmd.none )
@@ -393,8 +406,8 @@ update msg model =
             )
 
         -- Remote Control tab messages
-        ( RemoteControlMsg tabMsg, RemoteControlModel ) ->
-            RemControlTab.update tabMsg model
+        ( RemoteControlMsg tabMsg, RemoteControlModel tabModel ) ->
+            fromRemoteControlTabModel <| RemControlTab.update tabMsg model tabModel
 
         -- Wash Cycle parameters tab messages
         ( WashCyclesMsg tabMsg, WashCyclesModel tabModel ) ->
@@ -469,7 +482,7 @@ view model =
                 MachineConfigurationModel _ ->
                     Just 1
 
-                RemoteControlModel ->
+                RemoteControlModel _ ->
                     Just 0
 
                 WashCyclesModel _ ->
@@ -483,7 +496,7 @@ view model =
                 MachineConfigurationModel _ ->
                     Nothing
 
-                RemoteControlModel ->
+                RemoteControlModel _ ->
                     Nothing
 
                 WashCyclesModel { index } ->
@@ -497,8 +510,8 @@ view model =
                 MachineConfigurationModel tabModel ->
                     ParMacTab.view model tabModel |> Ui.map MachineConfigurationMsg
 
-                RemoteControlModel ->
-                    RemControlTab.view model |> Ui.map RemoteControlMsg
+                RemoteControlModel tabModel ->
+                    RemControlTab.view model tabModel |> Ui.map RemoteControlMsg
 
                 WashCyclesModel tabModel ->
                     WashCycleTab.view model tabModel |> Ui.map WashCyclesMsg

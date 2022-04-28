@@ -9,6 +9,8 @@
         const listen = window.__TAURI__.event.listen;
         const invoke = window.__TAURI__.invoke;
 
+        listen("tauri://resize", ({ event: _, payload }) => console.log(payload))
+
         changePage("PageSelection", "italiano")
             .then(_ => invoke("init_tasks"));
 

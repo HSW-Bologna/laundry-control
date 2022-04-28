@@ -9,16 +9,22 @@ import Array exposing (Array)
 import Bytes.Extra as Bytes
 import Chart
 import Chart.Attributes
-import Chart.Item
 import Chart.Events
+import Chart.Item
 import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
 import FontAwesome.Icon as FAIcon
 import FontAwesome.Solid as SolidIcons
+import Html
+import Html.Attributes
 import Ports as Ports
 import Widget as Widget
 import Widget.Material as Material
+
+
+type alias Datum =
+    ( Float, Float )
 
 
 type alias SharedModel a =
@@ -30,6 +36,20 @@ type alias SharedModel a =
     }
 
 
+type alias Model =
+    { hoveringTemperature : List (Chart.Item.One Datum Chart.Item.Dot)
+    , hoveringLevel : List (Chart.Item.One Datum Chart.Item.Dot)
+    , hoveringSpeed : List (Chart.Item.One Datum Chart.Item.Dot)
+    , hoveringDetergents : List (Chart.Item.One Datum Chart.Item.Bar)
+    , statsExpanded : Bool
+    }
+
+
+buildModel : Model
+buildModel =
+    Model [] [] [] [] False
+
+
 type Msg
     = LoadConfig String
     | SelectConfig String
@@ -39,38 +59,63 @@ type Msg
     | StopProgram
     | PauseProgram
     | AddCredit
+    | OnHoverTemperature (List (Chart.Item.One Datum Chart.Item.Dot))
+    | OnHoverLevel (List (Chart.Item.One Datum Chart.Item.Dot))
+    | OnHoverSpeed (List (Chart.Item.One Datum Chart.Item.Dot))
+    | OnHoverDetergent (List (Chart.Item.One Datum Chart.Item.Bar))
+    | ClearAlarms
+    | ToggleStats Bool
 
 
-update : Msg -> SharedModel a -> ( SharedModel a, Cmd msg )
-update msg model =
+update : Msg -> SharedModel a -> Model -> ( SharedModel a, Model, Cmd msg )
+update msg sharedModel model =
     case msg of
         LoadConfig archive ->
-            ( model, Ports.getRemoteMachineConfiguration archive )
+            ( sharedModel, model, Ports.getRemoteMachineConfiguration archive )
 
         SelectConfig archive ->
-            ( model, Ports.selectRemoteMachineConfiguration archive )
+            ( sharedModel, model, Ports.selectRemoteMachineConfiguration archive )
 
         SendConfig archive ->
-            ( model
+            ( sharedModel
+            , model
             , Ports.sendRemoteMachineConfiguration
                 archive.parmac.name
                 (Array.fromList <| Bytes.toByteValues <| WMC.createArchive archive)
             )
 
         StartProgram index ->
-            ( model, Ports.startProgram index )
+            ( sharedModel, model, Ports.startProgram index )
 
         StopProgram ->
-            ( model, Ports.stopProgram )
+            ( sharedModel, model, Ports.stopProgram )
 
         PauseProgram ->
-            ( model, Ports.pauseProgram )
+            ( sharedModel, model, Ports.pauseProgram )
 
         RestartProgram ->
-            ( model, Ports.restartProgram )
+            ( sharedModel, model, Ports.restartProgram )
 
         AddCredit ->
-            ( model, Cmd.none )
+            ( sharedModel, model, Cmd.none )
+
+        OnHoverTemperature hovering ->
+            ( sharedModel, { model | hoveringTemperature = hovering, hoveringLevel = [], hoveringSpeed = [], hoveringDetergents = [] }, Cmd.none )
+
+        OnHoverLevel hovering ->
+            ( sharedModel, { model | hoveringLevel = hovering, hoveringTemperature = [], hoveringSpeed = [], hoveringDetergents = [] }, Cmd.none )
+
+        OnHoverSpeed hovering ->
+            ( sharedModel, { model | hoveringSpeed = hovering, hoveringLevel = [], hoveringTemperature = [], hoveringDetergents = [] }, Cmd.none )
+
+        OnHoverDetergent hovering ->
+            ( sharedModel, { model | hoveringDetergents = hovering, hoveringSpeed = [], hoveringLevel = [], hoveringTemperature = [] }, Cmd.none )
+
+        ClearAlarms ->
+            ( sharedModel, model, Ports.clearAlarms )
+
+        ToggleStats toggled ->
+            ( sharedModel, { model | statsExpanded = toggled }, Cmd.none )
 
 
 
@@ -89,16 +134,16 @@ chartHeightNumber =
 
 topPanelHeight : Ui.Length
 topPanelHeight =
-    Ui.px 520
+    Ui.px topPanelHeightNumber
 
 
-view : SharedModel a -> Ui.Element Msg
-view ({ connectionState, context } as model) =
+view : SharedModel a -> Model -> Ui.Element Msg
+view ({ connectionState, context } as sharedModel) model =
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 16 ]
         [ Ui.paragraph [ Font.size 32, Ui.centerX ] [ Ui.text (translate Intl.ControlloRemoto context) ]
         , case connectionState of
-            Connected state configuration ->
-                machineView model state configuration
+            Connected state configuration stats ->
+                machineView sharedModel model state configuration stats
 
             Error ->
                 Ui.paragraph [ Ui.width Ui.fill ] <| [ Ui.text <| translate Intl.ErroreDiRete context ]
@@ -109,11 +154,18 @@ view ({ connectionState, context } as model) =
         |> AppWidgets.scrollbarYEl [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16 ]
 
 
-machineView : SharedModel a -> WMS.State -> WMS.Configuration -> Ui.Element Msg
-machineView { context, config, sensorsData } { state, credit, cycleNumber, stepType, portholeOpen, alarmCode, cycleRemaining, stepRemaining, stepNumber, stepCount } { machines, name, programs } =
+machineView : SharedModel a -> Model -> WMS.State -> WMS.Configuration -> WMS.Statistics -> Ui.Element Msg
+machineView { context, config, sensorsData } { hoveringTemperature, hoveringLevel, hoveringSpeed, hoveringDetergents, statsExpanded } { state, credit, cycleNumber, stepType, portholeOpen, alarmCode, cycleRemaining, stepRemaining, stepNumber, stepCount } { machines, name, programs } stats =
     let
         washType =
             Array.get cycleNumber programs |> Maybe.map .washType |> Maybe.withDefault 0
+
+        formatTime time =
+            let
+                whyIsntThisCore =
+                    String.padLeft 2 '0'
+            in
+            (whyIsntThisCore <| String.fromInt (time // 3600)) ++ ":" ++ (whyIsntThisCore <| String.fromInt (modBy 60 (time // 60))) ++ ":" ++ (whyIsntThisCore <| String.fromInt (modBy 60 time))
 
         cardStyle =
             [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.padding 8, Ui.spacing 8 ]
@@ -209,12 +261,6 @@ machineView { context, config, sensorsData } { state, credit, cycleNumber, stepT
         infoCard : Ui.Element Msg
         infoCard =
             let
-                whyIsntThisCore =
-                    String.padLeft 2 '0'
-
-                formatTime time =
-                    (whyIsntThisCore <| String.fromInt (time // 3600)) ++ ":" ++ (whyIsntThisCore <| String.fromInt (modBy 60 (time // 60))) ++ ":" ++ (whyIsntThisCore <| String.fromInt (modBy 60 time))
-
                 runningInfo button =
                     Ui.row [ Ui.centerY, Ui.width Ui.fill, Ui.spacing 16 ]
                         [ FAIcon.viewIcon SolidIcons.clock |> Ui.html
@@ -240,7 +286,13 @@ machineView { context, config, sensorsData } { state, credit, cycleNumber, stepT
         warningCard =
             (if alarmCode > 0 then
                 Ui.row [ Ui.width Ui.fill, Ui.centerY ]
-                    [ Ui.paragraph [ Ui.alignLeft ] [ Ui.text <| translate Intl.Allarme context ++ ": " ++ String.fromInt alarmCode ]
+                    [ Ui.column [ Ui.centerY, Ui.spacing 32, Ui.width Ui.fill ]
+                        [ Ui.paragraph [ Ui.alignLeft ]
+                            [ Ui.text <| translate Intl.Allarme context ++ ": " ++ String.fromInt alarmCode ]
+                        , AppWidgets.textButton
+                            (translate Intl.Azzera context)
+                            (Just ClearAlarms)
+                        ]
                     , Ui.image [ Ui.alignRight ] { src = "images/warning.png", description = "warning" }
                     ]
 
@@ -258,22 +310,36 @@ machineView { context, config, sensorsData } { state, credit, cycleNumber, stepT
 
                 _ ->
                     let
-                        chart lens color =
+                        chart lens color msg hovering um =
                             Chart.chart
-                                [ Chart.Attributes.height chartHeightNumber ]
+                                [ Chart.Attributes.height chartHeightNumber
+
+                                --,Chart.Attributes.width 480
+                                --Chart.Attributes.htmlAttrs [Html.Attributes.style "height" "30%" ]
+                                , Chart.Events.onMouseMove msg (Chart.Events.getNearest Chart.Item.dots)
+                                , Chart.Events.onMouseLeave (msg [])
+                                ]
                                 [ Chart.yLabels [ Chart.Attributes.withGrid, Chart.Attributes.fontSize 8 ]
-                                , Chart.series Tuple.first [ Chart.interpolated Tuple.second [ Chart.Attributes.color color ] [ Chart.Attributes.circle ] ] <|
+                                , Chart.series Tuple.first [ Chart.interpolated Tuple.second [ Chart.Attributes.color color ] [] ] <|
                                     Array.toList <|
                                         Array.indexedMap (\i sensors -> ( toFloat i, toFloat <| lens sensors )) sensorsData
+                                , Chart.each hovering <|
+                                    \_ item ->
+                                        let
+                                            y =
+                                                Chart.Item.getY item
+                                        in
+                                        [ Chart.tooltip item [] [] [ Html.text (String.fromFloat y ++ " " ++ um) ] ]
                                 ]
                                 |> Ui.html
-                                |> Ui.el [ Ui.width Ui.fill, Ui.padding 12 ]
+                                |> Ui.el [ Ui.width Ui.fill, Ui.paddingXY 48 16 ]
                     in
-                    Ui.column [ Ui.width Ui.fill, Ui.height topPanelHeight, Ui.spacing 32 ]
-                        [ chart .temperature "red"
-                        , chart .level "blue"
-                        , chart .speed "green"
+                    Ui.column [ Ui.width Ui.fill, Ui.spacing 32 ]
+                        [ chart .temperature "red" OnHoverTemperature hoveringTemperature "°C" -- "\u{00B0}C"
+                        , chart .level "blue" OnHoverLevel hoveringLevel "cm"
+                        , chart .speed "green" OnHoverSpeed hoveringSpeed "rpm"
                         ]
+                        |> Ui.el ([ Ui.width Ui.fill, Ui.height topPanelHeight, Ui.scrollbarY, Ui.spacing 16 ] ++ Style.focusedBorder True)
 
         --|> Ui.el (Style.focusedBorder (alarmCode > 0) ++ cardStyle)
         rightControlColumn : Ui.Element Msg
@@ -291,9 +357,73 @@ machineView { context, config, sensorsData } { state, credit, cycleNumber, stepT
                 [ leftControlColumn
                 , rightControlColumn
                 ]
+
+        statsPanel : WMS.Statistics -> Ui.Element Msg
+        statsPanel s =
+            Widget.expansionItem (Material.expansionItem Style.palette)
+                { onToggle = ToggleStats
+                , isExpanded = statsExpanded
+                , icon = always Ui.none
+                , text = translate Intl.Statistiche context
+                , content =
+                    [ ( Intl.CicliTotali, String.fromInt s.cycles )
+                    , ( Intl.CicliInterrotti, String.fromInt s.interruptedCycles )
+                    , ( Intl.CicliContinui, String.fromInt s.loopCycles )
+                    , ( Intl.TempoAcceso, formatTime s.onTime )
+                    , ( Intl.TempoDiLavoro, formatTime s.workTime )
+                    , ( Intl.TempoInMoto, formatTime s.rotationTime )
+                    , ( Intl.TempoInRiscaldamento, formatTime s.heatingTime )
+                    , ( Intl.TempoDiErogazioneDiAcquaFredda, formatTime s.coldWaterTime )
+                    , ( Intl.TempoDiErogazioneDiAcquaCalda, formatTime s.warmWaterTime )
+                    , ( Intl.TempoDellAcquaDiRecupero, formatTime s.recoveryWaterTime )
+                    , ( Intl.TempoDellAcquaDiFlussaggio, formatTime s.fluxWaterTime )
+                    , ( Intl.ChiusureOblo, String.fromInt s.portholeClosings )
+                    , ( Intl.ApertureOblo, String.fromInt s.portholeOpenings )
+                    ]
+                        |> List.map
+                            (\( intl, datum ) ->
+                                Ui.row [ Ui.width Ui.fill, Ui.padding 16 ]
+                                    [ Ui.paragraph [ Ui.alignLeft ] [ Ui.text <| translate intl context ]
+                                    , Ui.el [ Ui.alignRight ] <| Ui.text datum
+                                    ]
+                            )
+                        |> (\l ->
+                                l
+                                    ++ [ Chart.chart
+                                            [ Chart.Attributes.height 100
+                                            , Chart.Attributes.padding { top = 0, bottom = 8, left = 16, right = 0 }
+                                            , Chart.Events.onMouseMove OnHoverDetergent (Chart.Events.getNearest Chart.Item.bars)
+                                            , Chart.Events.onMouseLeave (OnHoverDetergent [])
+                                            ]
+                                            [ Chart.xLabels [ Chart.Attributes.withGrid, Chart.Attributes.fontSize 6, Chart.Attributes.ints ]
+                                            , Chart.yLabels [ Chart.Attributes.withGrid, Chart.Attributes.fontSize 6 ]
+                                            , Chart.bars
+                                                [ Chart.Attributes.x1 Tuple.first, Chart.Attributes.margin 0.02 ]
+                                                [ Chart.bar Tuple.second [] ]
+                                                (List.indexedMap (\i y -> ( toFloat i, toFloat y )) (List.take 10 s.soapTimes))
+                                            , Chart.each hoveringDetergents <|
+                                                \_ item ->
+                                                    let
+                                                        x =
+                                                            Chart.Item.getX item
+
+                                                        y =
+                                                            Chart.Item.getY item
+                                                    in
+                                                    [ Chart.tooltip item [] [] [ Html.text (translate Intl.TempoDiErogazioneSapone context ++ " " ++ String.fromFloat (x + 1) ++ ": " ++ formatTime (floor y)) ] ]
+                                            ]
+                                            |> Ui.html
+                                            |> Ui.el [ Ui.width Ui.fill, Ui.padding 32 ]
+                                       ]
+                           )
+                        |> List.map Widget.asItem
+                }
+                |> Widget.itemList (Material.cardColumn Style.palette)
     in
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.spacing 32 ]
         [ controlPanel
+        , Style.br
+        , statsPanel stats
         , Style.br
         , Ui.column [ Ui.centerX, Ui.height <| Ui.maximum topPanelHeightNumber Ui.fill, Ui.scrollbarY, Ui.spacing 32 ]
             [ Ui.paragraph [] [ Ui.text <| translate Intl.ConfigurazioneCorrente context ++ " " ++ name ]

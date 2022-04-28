@@ -1,8 +1,13 @@
-use super::{Configuration, ConnectionState, State, WashingMachineConnection};
+use super::{Configuration, ConnectionState, State, Statistics, WashingMachineConnection};
 use super::{Error, Result as WSResult};
 use reqwest;
 use reqwest::blocking::{Client, ClientBuilder};
 use urlencoding::encode;
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct StatisticsPair {
+  total: Statistics,
+}
 
 pub struct WashingMachineHttpConnection {
   ip: String,
@@ -26,12 +31,17 @@ impl WashingMachineHttpConnection {
   }
 
   fn first_connection(ip: &String, agent: &Client) -> ConnectionState {
-    match json_get(ip, agent, "state").and_then(|state| {
-      json_get(ip, agent, "machine").map(|configuration| ConnectionState::Connected {
-        state,
-        configuration,
-      })
-    }) {
+    match json_get(ip, agent, "state")
+      .and_then(|state| json_get(ip, agent, "machine").map(|configuration| (state, configuration)))
+      .and_then(|(state, configuration)| {
+        json_get::<StatisticsPair>(ip, agent, "statistics").map(|stats| {
+          ConnectionState::Connected {
+            state,
+            configuration,
+            stats: stats.total,
+          }
+        })
+      }) {
       Ok(state) => {
         log::info!("First connection successful");
         state
@@ -68,17 +78,23 @@ impl WashingMachineHttpConnection {
 }
 
 impl WashingMachineConnection for WashingMachineHttpConnection {
-  fn refresh_state(self: &mut Self) {
+  fn refresh_data(self: &mut Self) {
     use ConnectionState::*;
     self.connection_state = match self.connection_state.clone() {
       Error => Self::first_connection(&self.ip, &self.agent),
       Connected {
         state: _,
         configuration,
-      } => match self.json_get::<State>("state") {
-        Ok(state) => Connected {
+        stats: _,
+      } => match self.json_get::<State>("state").and_then(|state| {
+        self
+          .json_get::<StatisticsPair>("statistics")
+          .map(|stats| (state, stats.total))
+      }) {
+        Ok((state, stats)) => Connected {
           state,
           configuration,
+          stats,
         },
         Err(_) => Error,
       },
@@ -92,10 +108,12 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
       Connected {
         state,
         configuration: _,
+        stats,
       } => match self.json_get::<Configuration>("machine") {
         Ok(configuration) => Connected {
           state,
           configuration,
+          stats,
         },
         Err(_) => Error,
       },
@@ -155,6 +173,10 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
     self
       .post_json("start", &serde_json::json!({ "cycle": program }))
       .map_err(|_| Error::Network)
+  }
+
+  fn clear_alarms(self: &Self) -> WSResult<()> {
+    self.post("clear_alarms").map_err(|_| Error::Network)
   }
 }
 

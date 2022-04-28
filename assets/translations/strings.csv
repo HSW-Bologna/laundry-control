@@ -318,3 +318,19 @@ LavaggioInCorso, Lavaggio in corso, Washing
 LavaggioInPausa, Lavaggio in pausa, Washing paused
 FrenataInCorso, Frenata in corso, Braking
 ScaricoInCorso, Scarico in corso, Draining
+Azzera, Azzera, Clear
+Statistiche, Statistiche, Statistics
+CicliTotali, Cicli totali, Total cycles
+CicliInterrotti, Cicli interrotti, Interrupted cycles
+CicliContinui, Cicli continui, Continous cycles
+TempoAcceso, Tempo acceso, On time
+TempoDiLavoro, Tempo di lavoro, Work time
+TempoInMoto, Tempo in moto, Movement time
+TempoInRiscaldamento, Tempo in riscaldamento, Heating time
+TempoDiErogazioneDiAcquaFredda,Tempo di erogazione di acqua fredda, Cold water erogation time
+TempoDiErogazioneDiAcquaCalda, Tempo di erogazione di acqua calda, Warm water erogation time
+TempoDellAcquaDiRecupero, Tempo dell'acqua di recupero, Water recycle time
+TempoDellAcquaDiFlussaggio, Tempo dell'acqua di flussaggio, Water flux time
+TempoDiErogazioneSapone, Tempo di erogazione sapone, Soap erogation time
+ChiusureOblo, Chiusure oblo', Porthole closed
+ApertureOblo, Aperture oblo', Porthole opened

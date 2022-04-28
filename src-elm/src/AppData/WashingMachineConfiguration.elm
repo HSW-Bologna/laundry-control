@@ -195,10 +195,12 @@ boolOptions : List Intl.IntlString
 boolOptions =
     [ Intl.Disabilitato, Intl.Abilitato ]
 
+celsius = "\u{00B0}" -- "\u{00B0}"
 
 parameterMetadataList : List MachineParameter
 parameterMetadataList =
     let
+
         colorOptions =
             [ Intl.Spento, Intl.Blu, Intl.Verde, Intl.Azzurro, Intl.Rosso, Intl.Viola, Intl.Giallo, Intl.Bianco ]
 
@@ -280,10 +282,10 @@ parameterMetadataList =
     , { get = .accelerometerDelta, set = \v p -> { p | accelerometerDelta = v }, min = 0, max = 100, default = 50, description = Intl.DeltaAccelerometro, format = formatNumber, ui = Parameter.Number }
     , { get = .accelerometerWaitTime, set = \v p -> { p | accelerometerWaitTime = v }, min = 0, max = 60, default = 20, description = Intl.TempoDiAttesaDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .accelerometerDrainTime, set = \v p -> { p | accelerometerDrainTime = v }, min = 0, max = 1000, default = 20, description = Intl.TempoDiScaricoDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
-    , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
-    , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
-    , { get = .termodegratationTemperature, set = \v p -> { p | termodegratationTemperature = v }, min = 0, max = 60, default = 45, description = Intl.TemperaturaDiTermodegradazione, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
+    , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM celsius, ui = Parameter.Number }
+    , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM celsius, ui = Parameter.Number }
+    , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM celsius, ui = Parameter.Number }
+    , { get = .termodegratationTemperature, set = \v p -> { p | termodegratationTemperature = v }, min = 0, max = 60, default = 45, description = Intl.TemperaturaDiTermodegradazione, format = formatWithUM celsius, ui = Parameter.Number }
     , { get = .levelType, set = \v p -> { p | levelType = v }, min = 0, max = 2, default = 0, description = Intl.TipoLivello, format = formatOption [ Intl.Centimetri, Intl.UnContalitri, Intl.DueContalitri ], ui = Parameter.Option }
     , { get = .levelHysteresisTime, set = \v p -> { p | levelHysteresisTime = v }, min = 1, max = 60, default = 3, description = Intl.TempoDiIsteresiLivello, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .cmMaxLevel, set = \v p -> { p | cmMaxLevel = v }, min = 2, max = 100, default = 48, description = Intl.CentimetriLivelloMassimo, format = formatWithUM "cm", ui = Parameter.Number }
@@ -379,7 +381,7 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .heating, set = \v p -> { p | heating = v }, min = 0, max = 1, default = 0, description = Intl.Riscaldamento, format = formatOption boolOptions, ui = Parameter.Option }
 
         temperature =
-            { get = .temperature, set = \v p -> { p | temperature = v }, min = 0, max = maxTemperature, default = 0, description = Intl.Temperatura, format = formatWithUM "\u{00B0}C", ui = Parameter.Number }
+            { get = .temperature, set = \v p -> { p | temperature = v }, min = 0, max = maxTemperature, default = 0, description = Intl.Temperatura, format = formatWithUM celsius, ui = Parameter.Number }
 
         heatingType =
             { get = .heatingType, set = \v p -> { p | heatingType = v }, min = 0, max = 1, default = 1, description = Intl.TipoDiRiscaldamento, format = formatOption [ Intl.Diretto, Intl.Indiretto ], ui = Parameter.Option }

@@ -1,5 +1,6 @@
 port module Ports exposing
-    ( decodeEvent
+    ( clearAlarms
+    , decodeEvent
     , getRemoteMachineConfiguration
     , navigateHome
     , navigateToPage
@@ -159,6 +160,17 @@ stopProgram =
         variant : String
         variant =
             "Stop"
+    in
+    Encode.string variant
+        |> backendPort
+
+
+clearAlarms : Cmd msg
+clearAlarms =
+    let
+        variant : String
+        variant =
+            "ClearAlarms"
     in
     Encode.string variant
         |> backendPort

@@ -296,7 +296,7 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-ipDialog : Context -> List ( IpAddress, String ) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> msg -> List (Ui.Attribute msg)
+ipDialog : Context -> Maybe (List ( IpAddress, String )) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> msg -> List (Ui.Attribute msg)
 ipDialog context available ip msg submit refresh =
     let
         button text event align =
@@ -323,22 +323,23 @@ ipDialog context available ip msg submit refresh =
                                     }
                             )
                             (asList ip)
-                , if List.length available == 0 then
-                    Ui.el [ Ui.centerX ] <|
-                        Widget.circularProgressIndicator (Material.progressIndicator Style.palette) Nothing
+                , case available of
+                    Nothing ->
+                        Ui.el [ Ui.centerX ] <|
+                            Widget.circularProgressIndicator (Material.progressIndicator Style.palette) Nothing
 
-                  else
-                    available
-                        |> List.map
-                            (\( x, node ) ->
-                                Widget.fullBleedItem (Material.fullBleedItem Style.palette)
-                                    { onPress = Just <| msg x
-                                    , icon = always Ui.none
-                                    , text = IpAddress.toString x ++ " : " ++ node
-                                    }
-                            )
-                        |> Widget.itemList (Material.cardColumn Style.palette)
-                        |> Ui.el [ Ui.height <| Ui.maximum 240 Ui.fill, Ui.width Ui.fill ]
+                    Just availableList ->
+                        availableList
+                            |> List.map
+                                (\( x, node ) ->
+                                    Widget.fullBleedItem (Material.fullBleedItem Style.palette)
+                                        { onPress = Just <| msg x
+                                        , icon = always Ui.none
+                                        , text = IpAddress.toString x ++ " : " ++ node
+                                        }
+                                )
+                            |> Widget.itemList (Material.cardColumn Style.palette)
+                            |> Ui.el [ Ui.height <| Ui.maximum 240 Ui.fill, Ui.width Ui.fill ]
                 , Ui.row
                     [ Ui.alignBottom, Ui.width Ui.fill ]
                     [ button "cancella" (submit Nothing) Ui.alignLeft

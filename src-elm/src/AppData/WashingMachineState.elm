@@ -30,6 +30,24 @@ type alias State =
     }
 
 
+type alias Statistics =
+    { cycles : Int
+    , interruptedCycles : Int
+    , loopCycles : Int
+    , onTime : Int
+    , workTime : Int
+    , rotationTime : Int
+    , heatingTime : Int
+    , coldWaterTime : Int
+    , warmWaterTime : Int
+    , recoveryWaterTime : Int
+    , fluxWaterTime : Int
+    , portholeClosings : Int
+    , portholeOpenings : Int
+    , soapTimes : List Int
+    }
+
+
 type alias Sensors =
     { temperature : Int, level : Int, speed : Int }
 
@@ -50,7 +68,7 @@ type alias Configuration =
 
 type ConnectionState
     = Disconnected
-    | Connected State Configuration
+    | Connected State Configuration Statistics
     | Error
 
 
@@ -109,12 +127,31 @@ connectionStateUpdateDecoder =
                 |> Pipeline.required "app_version" Decode.string
                 |> Pipeline.required "machines" (Decode.list Decode.string)
                 |> Pipeline.required "programs" (Decode.array programPreviewDecoder)
+
+        statisticsDecoder : Decode.Decoder Statistics
+        statisticsDecoder =
+            Decode.succeed Statistics
+                |> Pipeline.required "cycles" Decode.int
+                |> Pipeline.required "interrupted_cycles" Decode.int
+                |> Pipeline.required "loop_cycles" Decode.int
+                |> Pipeline.required "on_time" Decode.int
+                |> Pipeline.required "work_time" Decode.int
+                |> Pipeline.required "rotation_time" Decode.int
+                |> Pipeline.required "heating_time" Decode.int
+                |> Pipeline.required "cold_water_time" Decode.int
+                |> Pipeline.required "warm_water_time" Decode.int
+                |> Pipeline.required "recovery_water_time" Decode.int
+                |> Pipeline.required "flux_water_time" Decode.int
+                |> Pipeline.required "porthole_closings" Decode.int
+                |> Pipeline.required "porthole_openings" Decode.int
+                |> Pipeline.required "soap_times" (Decode.list Decode.int)
     in
     Decode.oneOf
         [ Decode.null Disconnected
         , Decode.succeed Connected
             |> Pipeline.requiredAt [ "Connected", "state" ] washingMachineStateDecoder
             |> Pipeline.requiredAt [ "Connected", "configuration" ] configurationDecoder
+            |> Pipeline.requiredAt [ "Connected", "stats" ] statisticsDecoder
         , Decode.andThen
             (\s ->
                 if s == "Error" then
