@@ -7,6 +7,7 @@ import Bytes exposing (Bytes, Endianness(..))
 import Bytes.Decode as Decode exposing (Decoder)
 import Bytes.Decode.Extra as Decode
 import Bytes.Encode as Encode exposing (Encoder)
+import Bytes.Extra as Bytes
 import Context exposing (Context, translate)
 import Element.Region exposing (description)
 import Flate
@@ -195,12 +196,18 @@ boolOptions : List Intl.IntlString
 boolOptions =
     [ Intl.Disabilitato, Intl.Abilitato ]
 
-celsius = "\u{00B0}" -- "\u{00B0}"
+
+celsius =
+    "°"
+
+
+
+-- "\u{00B0}"
+
 
 parameterMetadataList : List MachineParameter
 parameterMetadataList =
     let
-
         colorOptions =
             [ Intl.Spento, Intl.Blu, Intl.Verde, Intl.Azzurro, Intl.Rosso, Intl.Viola, Intl.Giallo, Intl.Bianco ]
 
@@ -217,7 +224,7 @@ parameterMetadataList =
     , { get = .nodeCode, set = \v p -> { p | nodeCode = v }, min = 0, max = 255, default = 0, description = Intl.CodiceNodoMacchina, format = formatNumber, ui = Parameter.Number }
     , { get = .machineModel, set = \v p -> { p | machineModel = v }, min = 0, max = 255, default = 255, description = Intl.ModelloMacchina, format = formatNumber, ui = Parameter.Number }
     , { get = .machineSubModel, set = \v p -> { p | machineSubModel = v }, min = 0, max = 255, default = 255, description = Intl.SottomodelloMacchina, format = formatNumber, ui = Parameter.Number }
-    , { get = .accessLevel, set = \v p -> { p | accessLevel = v }, min = 0, max = 3, default = 0, description = Intl.LivelloDiAccesso, format = formatOption [Intl.Utente, Intl.Tecnico, Intl.Distributore, Intl.Costruttore], ui = Parameter.Option }
+    , { get = .accessLevel, set = \v p -> { p | accessLevel = v }, min = 0, max = 3, default = 0, description = Intl.LivelloDiAccesso, format = formatOption [ Intl.Utente, Intl.Tecnico, Intl.Distributore, Intl.Costruttore ], ui = Parameter.Option }
     , { get = .stopUi, set = \v p -> { p | stopUi = v }, min = 0, max = 1, default = 0, description = Intl.InterfacciaDaFermo, format = formatOption uiOptions, ui = Parameter.Option }
     , { get = .startUi, set = \v p -> { p | startUi = v }, min = 0, max = 1, default = 0, description = Intl.InterfacciaInFunzionamento, format = formatOption uiOptions, ui = Parameter.Option }
     , { get = .maxPrograms, set = \v p -> { p | maxPrograms = v }, min = 0, max = 100, default = 100, description = Intl.NumeroMassimoDiProgrammi, format = formatNumber, ui = Parameter.Number }
@@ -1260,8 +1267,30 @@ extractArchive archiveBytes =
                     )
 
         getMachineParameters : List ( Tar.Metadata, Tar.Data ) -> Maybe MachineParameters
-        getMachineParameters =
-            binaryFileContents parmacFileName >> Maybe.andThen (Decode.decode machineParametersDecoder)
+        getMachineParameters list =
+            let
+                parmacFile : Maybe Bytes
+                parmacFile =
+                    binaryFileContents parmacFileName list
+
+                padOp : Bytes -> Bytes
+                padOp bytes =
+                    let
+                        length =
+                            Bytes.width bytes
+
+                        missing =
+                            if length < parmacSize then
+                                parmacSize - length
+
+                            else
+                                0
+                    in
+                    Bytes.fromByteValues <| (Bytes.toByteValues bytes ++ List.repeat missing 0)
+            in
+            parmacFile
+                |> Maybe.map padOp
+                |> Maybe.andThen (Decode.decode machineParametersDecoder)
 
         getIndex : List ( Tar.Metadata, Tar.Data ) -> Maybe (List String)
         getIndex =
@@ -1350,6 +1379,11 @@ versionFileName =
 dataVersion : Bytes.Bytes
 dataVersion =
     encodeString "3\n"
+
+
+parmacSize : Int
+parmacSize =
+    279
 
 
 stringEncoder : String -> Encode.Encoder

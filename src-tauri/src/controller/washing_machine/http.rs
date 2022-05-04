@@ -109,8 +109,10 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
       let len = header.len();
       let mut bytes: Vec<u8> = Vec::with_capacity(len);
       resp.copy_to(&mut bytes).map_err(|_| Error::Protocol)?;
+      log::info!("Downloaded machine config");
       Ok(bytes)
     } else {
+      log::warn!("Failed to download machine config");
       Err(Error::Protocol)
     }
   }
