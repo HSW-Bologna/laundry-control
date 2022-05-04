@@ -581,7 +581,7 @@ view model =
                         []
                     , search = Nothing
                     }
-            , Ui.row [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.spacing 2 ]
+            , Ui.row [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.spacing 2, Ui.clipX ]
                 [ if model.leftDrawerVisible then
                     AppWidgets.leftDrawer
                         { context = model.context

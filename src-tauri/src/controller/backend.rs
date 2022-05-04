@@ -132,6 +132,7 @@ pub fn task(window: Window) {
             bytes.into(),
           ),
         );
+        quick_update_ts = Some(Instant::now());
       }
       Ok(GetMachineConfiguration(archive)) => {
         match connection
@@ -154,13 +155,8 @@ pub fn task(window: Window) {
           .select_machine_configuration(archive)
         {
           Ok(()) => {
-            thread::sleep(Duration::from_millis(250));
-            connection
-              .as_deref_mut()
-              .unwrap()
-              .refresh_configuration_archive();
-            send_state(&connection, &window);
             snackbar_message(&window, "Successo");
+            quick_update_ts = Some(Instant::now());
           }
           Err(_) => snackbar_message(&window, "Fallimento"),
         };

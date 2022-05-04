@@ -79,45 +79,7 @@ impl WashingMachineHttpConnection {
 
 impl WashingMachineConnection for WashingMachineHttpConnection {
   fn refresh_data(self: &mut Self) {
-    use ConnectionState::*;
-    self.connection_state = match self.connection_state.clone() {
-      Error => Self::first_connection(&self.ip, &self.agent),
-      Connected {
-        state: _,
-        configuration,
-        stats: _,
-      } => match self.json_get::<State>("state").and_then(|state| {
-        self
-          .json_get::<StatisticsPair>("statistics")
-          .map(|stats| (state, stats.total))
-      }) {
-        Ok((state, stats)) => Connected {
-          state,
-          configuration,
-          stats,
-        },
-        Err(_) => Error,
-      },
-    };
-  }
-
-  fn refresh_configuration_archive(self: &mut Self) {
-    use ConnectionState::*;
-    self.connection_state = match self.connection_state.clone() {
-      Error => Self::first_connection(&self.ip, &self.agent),
-      Connected {
-        state,
-        configuration: _,
-        stats,
-      } => match self.json_get::<Configuration>("machine") {
-        Ok(configuration) => Connected {
-          state,
-          configuration,
-          stats,
-        },
-        Err(_) => Error,
-      },
-    };
+    self.connection_state = Self::first_connection(&self.ip, &self.agent);
   }
 
   fn send_machine_configuration(self: &Self, archive: String, data: Vec<u8>) -> WSResult<()> {

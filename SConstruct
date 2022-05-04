@@ -19,7 +19,7 @@ for folder in folders:
         binfolder = os.path.abspath(folder)
         break
 if not binfolder:
-    exit(1)
+    binfolder = folders[0]
 
 UGLIFYJS = os.path.join(binfolder, "uglifyjs")
 ELM = os.path.join(binfolder, "elm")
@@ -45,8 +45,11 @@ env.Command(UGLIFYJS, [], 'npm install uglify-es')
 intl = csv2elm.create_scons_target(env, "assets/translations",
                             "src-elm/src", "src-elm/src/AUTOGEN_FILE_translations.elm")
 
+
+elmfiles = [os.path.join("src","Pages","PageSelection.elm"), os.path.join("src","Pages", "PageWashingMachine.elm")]
+
 env.Command(ELMJS, [elmsrc, ELM, intl],
-            f"cd {ELMSRC} && {ELM} make src/Pages/*.elm {'--optimize' if GetOption('release') else ''} --output={ELMJS}")
+            f"cd {ELMSRC} && {ELM} make {' '.join(elmfiles)} {'--optimize' if GetOption('release') else ''} --output={ELMJS}")
 
 
 if GetOption("release"):
@@ -69,5 +72,6 @@ def copyelm(*args, **kwargs):
 
 
 final = env.Command(f"{DIST}/{os.path.basename(MINELMJS)}", MINELMJS, copyelm)
+
 env.Default(final)
 env.NoClean([ELM, UGLIFYJS])

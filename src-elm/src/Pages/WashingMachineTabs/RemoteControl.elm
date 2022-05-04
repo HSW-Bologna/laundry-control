@@ -263,8 +263,7 @@ machineView { context, config, sensorsData } { hoveringTemperature, hoveringLeve
             let
                 runningInfo button =
                     Ui.row [ Ui.centerY, Ui.width Ui.fill, Ui.spacing 16 ]
-                        [ FAIcon.viewIcon SolidIcons.clock |> Ui.html
-                        , Ui.column [ Ui.alignLeft, Ui.spacing 16 ] [ Ui.text <| formatTime cycleRemaining, Ui.text <| formatTime stepRemaining ]
+                        [ Ui.column [ Ui.alignLeft, Ui.spacing 16 ] [ Ui.text <| formatTime cycleRemaining, Ui.text <| formatTime stepRemaining ]
                         , Ui.column [ Ui.alignRight, Ui.spacing 16 ]
                             [ button
                             , AppWidgets.iconButton SolidIcons.stop StopProgram "stop"
@@ -420,14 +419,15 @@ machineView { context, config, sensorsData } { hoveringTemperature, hoveringLeve
                 }
                 |> Widget.itemList (Material.cardColumn Style.palette)
     in
-    Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.spacing 32 ]
+    Ui.column [ Ui.width Ui.fill, Ui.spacing 32 ]
         [ controlPanel
         , Style.br
         , statsPanel stats
         , Style.br
-        , Ui.column [ Ui.centerX, Ui.height <| Ui.maximum topPanelHeightNumber Ui.fill, Ui.scrollbarY, Ui.spacing 32 ]
+        , Ui.column [ Ui.centerX, Ui.spacing 32 ]
             [ Ui.paragraph [] [ Ui.text <| translate Intl.ConfigurazioneCorrente context ++ " " ++ name ]
             , sendConfigBtn
             , archiveList machines LoadConfig SelectConfig
             ]
+        , Style.br
         ]

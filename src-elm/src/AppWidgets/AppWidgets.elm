@@ -261,8 +261,8 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
             }
     )
         |> Widget.itemList (Material.cardColumn Style.palette)
-        |> scrollbarYEl [ Ui.height Ui.fill, Ui.width <| Ui.px 346 ]
-        |> Ui.el ([ Ui.alignLeft, Ui.height Ui.fill, Ui.width <| Ui.px 346 ] ++ Style.border)
+        |> scrollbarYEl [ Ui.height Ui.fill, Ui.width <| Ui.px 346, Ui.clipX ]
+        |> Ui.el ([ Ui.alignLeft, Ui.height Ui.fill, Ui.width <| Ui.px 346, Ui.clipX ] ++ Style.border)
 
 
 cyclesItems : Context -> Maybe Int -> (Int -> msg) -> List String -> List (Widget.Item msg)

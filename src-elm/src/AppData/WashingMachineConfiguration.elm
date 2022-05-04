@@ -577,7 +577,7 @@ default context =
 machineParametersDecoder : Decoder MachineParameters
 machineParametersDecoder =
     Decode.succeed MachineParameters
-        |> Decode.andMap (Decode.string 33)
+        |> Decode.andMap (Decode.map cleanStringFromNull (Decode.string 33))
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
         |> Decode.andMap (Decode.unsignedInt16 BE)
@@ -1362,9 +1362,14 @@ encodeString =
     stringEncoder >> Encode.encode
 
 
+cleanStringFromNull : String -> String
+cleanStringFromNull s =
+    String.toList s |> List.filter (\c -> Char.toCode c /= 0) |> String.fromList
+
+
 limitedStringDecoder : Decode.Decoder String
 limitedStringDecoder =
-    Decode.string 33
+    Decode.map cleanStringFromNull (Decode.string 33)
 
 
 limitedStringEncoder : String -> Encode.Encoder

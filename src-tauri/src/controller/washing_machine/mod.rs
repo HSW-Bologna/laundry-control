@@ -70,7 +70,6 @@ pub enum ConnectionState {
 
 pub trait WashingMachineConnection {
   fn refresh_data(self: &mut Self);
-  fn refresh_configuration_archive(self: &mut Self);
   fn send_machine_configuration(self: &Self, archive: String, data: Vec<u8>) -> Result<()>;
   fn get_machine_configuration(self: &Self, archive: String) -> Result<Vec<u8>>;
   fn select_machine_configuration(self: &Self, archive: String) -> Result<()>;
