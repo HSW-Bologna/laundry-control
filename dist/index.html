@@ -11,7 +11,7 @@
 
         listen("tauri://resize", ({ event: _, payload }) => console.log(payload))
 
-        changePage("PageSelection", "italiano")
+        changePage("Machine", "italiano")
             .then(_ => invoke("init_tasks"));
 
         async function changePage(page, language) {
@@ -21,7 +21,9 @@
                 }
             }
 
-            if (Elm.Pages[page] == undefined) {
+            if (Elm.Pages[page] == undefined || Elm.Pages[page].Page == undefined) {
+                console.log("Invalid page: " + page);
+                console.log(Elm.Pages[page]);
                 return;
             }
 
@@ -30,7 +32,7 @@
             removeAllChildNodes(container);
             container.appendChild(appDiv);
 
-            var app = Elm.Pages[page].init({ node: appDiv, flags: language });
+            var app = Elm.Pages[page].Page.init({ node: appDiv, flags: language });
 
             for (const port in app.ports) {
                 if (app.ports[port].hasOwnProperty("subscribe")) {
@@ -49,10 +51,12 @@
                 }
             }
 
-            app.ports.navigateTo.subscribe(function (message) {
-                changePage(message.page, message.language);
-                emit("backendPort", JSON.stringify("Refresh"));
-            });
+            if (app.ports.hasOwnProperty("navigateTo")) {
+                app.ports.navigateTo.subscribe(function (message) {
+                    changePage(message.page, message.language);
+                    emit("backendPort", JSON.stringify("Refresh"));
+                });
+            }
         }
     </script>
 </body>

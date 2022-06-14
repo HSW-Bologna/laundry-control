@@ -1,4 +1,4 @@
-use super::{Configuration, ConnectionState, State, Statistics, WashingMachineConnection};
+use super::{ConnectionState, Statistics, WashingMachineConnection};
 use super::{Error, Result as WSResult};
 use reqwest;
 use reqwest::blocking::{Client, ClientBuilder};
@@ -53,9 +53,9 @@ impl WashingMachineHttpConnection {
     }
   }
 
-  fn json_get<R: serde::de::DeserializeOwned>(self: &Self, target: &str) -> WSResult<R> {
+  /*fn json_get<R: serde::de::DeserializeOwned>(self: &Self, target: &str) -> WSResult<R> {
     json_get(&self.ip, &self.agent, target)
-  }
+  }*/
 
   fn post(self: &Self, target: &str) -> reqwest::Result<()> {
     self

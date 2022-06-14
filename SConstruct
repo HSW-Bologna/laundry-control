@@ -43,10 +43,10 @@ env.Command(ELM, [], 'npm install elm')
 env.Command(UGLIFYJS, [], 'npm install uglify-es')
 
 intl = csv2elm.create_scons_target(env, "assets/translations",
-                            "src-elm/src", "src-elm/src/AUTOGEN_FILE_translations.elm")
+                                   "src-elm/src", "src-elm/src/AUTOGEN_FILE_translations.elm")
 
 
-elmfiles = [os.path.join("src","Pages","PageSelection.elm"), os.path.join("src","Pages", "PageWashingMachine.elm")]
+elmfiles = [os.path.join("src", "Pages", "Machine", "Page.elm")]
 
 env.Command(ELMJS, [elmsrc, ELM, intl],
             f"cd {ELMSRC} && {ELM} make {' '.join(elmfiles)} {'--optimize' if GetOption('release') else ''} --output={ELMJS}")

@@ -1,4 +1,4 @@
-module Pages.WashingMachineTabs.RemoteControl exposing (..)
+module Pages.Machine.Tabs.RemoteControl exposing (..)
 
 import AUTOGEN_FILE_translations as Intl
 import AppData.WashingMachineConfiguration as WMC
@@ -140,7 +140,7 @@ topPanelHeight =
 view : SharedModel a -> Model -> Ui.Element Msg
 view ({ connectionState, context } as sharedModel) model =
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 16 ]
-        [ Ui.paragraph [ Font.size 32, Ui.centerX ] [ Ui.text (translate Intl.ControlloRemoto context) ]
+        [ Ui.paragraph [ Font.size 32, Ui.centerX ] [ Ui.text (translate Intl.Macchina context) ]
         , case connectionState of
             Connected state configuration stats ->
                 machineView sharedModel model state configuration stats

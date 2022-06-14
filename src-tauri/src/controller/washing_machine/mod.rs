@@ -1,10 +1,6 @@
 use serde;
 pub mod http;
-
-pub enum Error {
-  Network,
-  Protocol,
-}
+use super::Error;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

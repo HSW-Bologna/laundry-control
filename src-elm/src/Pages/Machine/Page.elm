@@ -1,7 +1,8 @@
-port module Pages.PageWashingMachine exposing (..)
+port module Pages.Machine.Page exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (getTranslation, languageFromString)
 import AppData.IpAddress as IpAddress exposing (IpAddress, changePart, localhost, toString)
+import AppData.Things5 exposing (Device, deviceDecoder)
 import AppData.WashingMachineConfiguration as WMC exposing (MachineConfiguration, MachineParameters, extractArchive)
 import AppData.WashingMachineState as WSS
 import AppWidgets.AppWidgets as AppWidgets
@@ -20,9 +21,10 @@ import FontAwesome.Transforms exposing (RepositionTransform(..))
 import Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Pages.WashingMachineTabs.MachineConfiguration as ParMacTab
-import Pages.WashingMachineTabs.RemoteControl as RemControlTab
-import Pages.WashingMachineTabs.WashingCycle as WashCycleTab
+import Pages.Machine.Tabs.MachineConfiguration as ParMacTab
+import Pages.Machine.Tabs.RemoteControl as RemControlTab
+import Pages.Machine.Tabs.RemoteDevicesList as RemDevListTab
+import Pages.Machine.Tabs.WashingCycle as WashCycleTab
 import Ports as Ports exposing (decodeEvent, getRemoteMachineConfiguration)
 import Task
 import Time
@@ -60,6 +62,8 @@ type alias Model =
     , connectionState : WSS.ConnectionState
     , sensorsData : Array WSS.Sensors
     , localMachines : Maybe (List ( IpAddress, String ))
+    , things5Token : Maybe String
+    , things5Devices : List Device
     }
 
 
@@ -80,6 +84,8 @@ init language =
       , connectionState = WSS.Disconnected
       , localMachines = Nothing
       , sensorsData = Array.empty
+      , things5Token = Nothing
+      , things5Devices = []
       }
     , Cmd.none
     )
@@ -89,6 +95,7 @@ type TabModel
     = MachineConfigurationModel ParMacTab.Model
     | RemoteControlModel RemControlTab.Model
     | WashCyclesModel WashCycleTab.Model
+    | RemoteDevicesListModel RemDevListTab.Model
     | NoTab
 
 
@@ -118,6 +125,11 @@ fromMachineConfigurationTabModel tabModel model =
     { model | config = Just tabModel.config, tabModel = MachineConfigurationModel tabModel }
 
 
+fromRemoteDevicesListTabModel : ( Model, RemDevListTab.Model, Cmd msg ) -> ( Model, Cmd msg )
+fromRemoteDevicesListTabModel ( model, tabModel, cmd ) =
+    ( { model | tabModel = RemoteDevicesListModel tabModel }, cmd )
+
+
 fromRemoteControlTabModel : ( Model, RemControlTab.Model, Cmd msg ) -> ( Model, Cmd msg )
 fromRemoteControlTabModel ( model, tabModel, cmd ) =
     ( { model | tabModel = RemoteControlModel tabModel }, cmd )
@@ -137,9 +149,13 @@ toRemoteControl =
     RemoteControlModel RemControlTab.buildModel
 
 
+toRemoteDevicesList : TabModel
+toRemoteDevicesList =
+    RemoteDevicesListModel RemDevListTab.buildModel
+
+
 type Msg
-    = Back
-    | SaveMachineConfig
+    = SaveMachineConfig
     | LoadMachineFromLocal
     | CreateNewMachineConfig
     | MachineSelected File
@@ -150,10 +166,13 @@ type Msg
     | ProgramListToggle Bool
     | MachineConfigurationMsg ParMacTab.Msg
     | RemoteControlMsg RemControlTab.Msg
+    | RemoteDevicesListMsg RemDevListTab.Msg
     | WashCyclesMsg WashCycleTab.Msg
     | ChangeTab TabModel
     | ChangeTabCycle Int
     | TimePassed Int
+    | Things5Token String
+    | Things5Devices Encode.Value
     | StateUpdate Encode.Value
     | IpAddresses Encode.Value
     | InsertIpAddress
@@ -167,6 +186,12 @@ port ipAddresses : (Encode.Value -> msg) -> Sub msg
 
 
 port stateUpdate : (Encode.Value -> msg) -> Sub msg
+
+
+port things5Login : (String -> msg) -> Sub msg
+
+
+port things5Devices : (Encode.Value -> msg) -> Sub msg
 
 
 port remoteMachineLoaded : (Array Int -> msg) -> Sub msg
@@ -237,9 +262,6 @@ update msg model =
     in
     case ( msg, model.tabModel ) of
         -- Global messages
-        ( Back, _ ) ->
-            ( model, Ports.navigateHome model.context.language )
-
         ( TimePassed int, _ ) ->
             ( { model | snackbar = model.snackbar |> Snackbar.timePassed int }, Cmd.none )
 
@@ -267,6 +289,19 @@ update msg model =
                 |> Result.toMaybe
                 |> Maybe.map (\ips -> { model | localMachines = Just ips })
                 |> Maybe.withDefault model
+            , Cmd.none
+            )
+
+        ( Things5Token token, _ ) ->
+            ( { model | things5Token = Just token }, Cmd.none )
+
+        ( Things5Devices value, _ ) ->
+            ( case Decode.decodeValue (Decode.list deviceDecoder) value of
+                Ok devices ->
+                    { model | things5Devices = devices }
+
+                _ ->
+                    model
             , Cmd.none
             )
 
@@ -405,6 +440,10 @@ update msg model =
             , Cmd.none
             )
 
+        -- Remote device list tab messages
+        ( RemoteDevicesListMsg tabMsg, RemoteDevicesListModel tabModel ) ->
+            fromRemoteDevicesListTabModel <| RemDevListTab.update tabMsg model tabModel
+
         -- Remote Control tab messages
         ( RemoteControlMsg tabMsg, RemoteControlModel tabModel ) ->
             fromRemoteControlTabModel <| RemControlTab.update tabMsg model tabModel
@@ -464,6 +503,8 @@ subscriptions _ =
     Sub.batch
         [ Time.every 100 (always (TimePassed 100))
         , stateUpdate StateUpdate
+        , things5Login Things5Token
+        , things5Devices Things5Devices
         , ipAddresses IpAddresses
         , remoteMachineLoaded StupidElmMachineLoaded
         , notificationMessage BackendSnackbarMessage
@@ -479,11 +520,14 @@ view model =
     let
         selectedTab =
             case model.tabModel of
-                MachineConfigurationModel _ ->
-                    Just 1
+                RemoteDevicesListModel _ ->
+                    Just 0
 
                 RemoteControlModel _ ->
-                    Just 0
+                    Just 1
+
+                MachineConfigurationModel _ ->
+                    Just 2
 
                 WashCyclesModel _ ->
                     Nothing
@@ -493,22 +537,19 @@ view model =
 
         selectedCycle =
             case model.tabModel of
-                MachineConfigurationModel _ ->
-                    Nothing
-
-                RemoteControlModel _ ->
-                    Nothing
-
                 WashCyclesModel { index } ->
                     Just index
 
-                NoTab ->
+                _ ->
                     Nothing
 
         tabRouter =
             case model.tabModel of
                 MachineConfigurationModel tabModel ->
                     ParMacTab.view model tabModel |> Ui.map MachineConfigurationMsg
+
+                RemoteDevicesListModel tabModel ->
+                    RemDevListTab.view model tabModel |> Ui.map RemoteDevicesListMsg
 
                 RemoteControlModel tabModel ->
                     RemControlTab.view model tabModel |> Ui.map RemoteControlMsg
@@ -525,7 +566,6 @@ view model =
                 , ( Intl.SalvaConfigurazione, Maybe.map (always SaveMachineConfig) model.config )
                 , ( Intl.NuovaConfigurazione, Just CreateNewMachineConfig )
                 , ( Intl.ConnessioneLocale, Just InsertIpAddress )
-                , ( Intl.ConnessioneRemota, Nothing )
                 ]
 
         rightMenuAddition =
@@ -586,13 +626,13 @@ view model =
                     AppWidgets.leftDrawer
                         { context = model.context
                         , selected = selectedTab
-                        , back = Back
                         , goToConfig = Maybe.map (\c -> ChangeTab (toMachineConfigurationTabModel c)) model.config
                         , cyclesExpanded = model.programListExpanded
                         , toggleCycles = ProgramListToggle
                         , selectedCycle = selectedCycle
                         , cycles = cycles
                         , goToRemoteControl = ChangeTab toRemoteControl
+                        , goToRemoteDeviceList = ChangeTab toRemoteDevicesList
                         , goToCycle = ChangeTabCycle
                         }
 

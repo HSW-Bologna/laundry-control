@@ -47,7 +47,6 @@ pub async fn poll() -> Result<Vec<(String, String)>, io::Error> {
         }
       }
     }
-    // Remaining code not directly relevant to the question
   }
 
   Ok(results)

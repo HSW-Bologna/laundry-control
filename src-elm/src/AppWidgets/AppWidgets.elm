@@ -216,8 +216,8 @@ languageSelect context msg =
 type alias DrawerConfig msg =
     { context : Context
     , selected : Maybe Int
-    , back : msg
     , goToRemoteControl : msg
+    , goToRemoteDeviceList : msg
     , goToConfig : Maybe msg
     , selectedCycle : Maybe Int
     , cyclesExpanded : Bool
@@ -228,7 +228,7 @@ type alias DrawerConfig msg =
 
 
 leftDrawer : DrawerConfig msg -> Ui.Element msg
-leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, cycles, selectedCycle, goToCycle, goToRemoteControl } =
+leftDrawer { context, selected, goToConfig, cyclesExpanded, toggleCycles, cycles, selectedCycle, goToCycle, goToRemoteControl, goToRemoteDeviceList } =
     let
         tabOption ( name, msg ) =
             { text = translate name context
@@ -236,21 +236,17 @@ leftDrawer { context, selected, back, goToConfig, cyclesExpanded, toggleCycles, 
             }
 
         mainOptions =
-            [ ( Intl.ControlloRemoto, Just goToRemoteControl )
+            [ ( Intl.DispositiviRemoti, Just goToRemoteDeviceList )
+            , ( Intl.Macchina, Just goToRemoteControl )
             , ( Intl.ParametriMacchina, goToConfig )
             ]
     in
-    (Widget.fullBleedItem (Material.fullBleedItem Style.palette)
-        { onPress = Just back
-        , icon = SolidIcons.home |> Icon.elmFontawesome FontAwesomeSvg.viewIcon
-        , text = translate Intl.Indietro context
-        }
-        :: ({ selected = selected
-            , options = List.map tabOption mainOptions
-            , onSelect = \s -> Maybe.andThen Tuple.second <| Array.get s <| Array.fromList mainOptions
-            }
-                |> Widget.selectItem (Material.selectItem Style.palette)
-           )
+    (({ selected = selected
+      , options = List.map tabOption mainOptions
+      , onSelect = \s -> Maybe.andThen Tuple.second <| Array.get s <| Array.fromList mainOptions
+      }
+        |> Widget.selectItem (Material.selectItem Style.palette)
+     )
         ++ Widget.expansionItem (Material.expansionItem Style.palette)
             { onToggle = toggleCycles
             , isExpanded = cyclesExpanded

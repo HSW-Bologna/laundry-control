@@ -9,6 +9,7 @@ use simplelog::*;
 
 #[tauri::command]
 fn init_tasks(_app: AppHandle, window: Window) -> Result<(), String> {
+  log::info!("Spawning backend thread");
   thread::spawn(move || controller::backend::task(window));
   Ok(())
 }
@@ -16,7 +17,7 @@ fn init_tasks(_app: AppHandle, window: Window) -> Result<(), String> {
 fn main() {
   CombinedLogger::init(vec![
     TermLogger::new(
-      LevelFilter::Info,
+      LevelFilter::Debug,
       Config::default(),
       TerminalMode::Mixed,
       ColorChoice::Auto,

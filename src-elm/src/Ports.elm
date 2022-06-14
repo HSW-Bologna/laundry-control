@@ -12,6 +12,7 @@ port module Ports exposing
     , sendRemoteMachineConfiguration
     , startProgram
     , stopProgram
+    , things5Login
     , washingMachineHttpConnect
     )
 
@@ -85,6 +86,17 @@ washingMachineHttpConnect machine =
             "WashingMachineHttpConnect"
     in
     Encode.object [ ( variant, Encode.string machine ) ]
+        |> backendPort
+
+
+things5Login : String -> String -> Cmd msg
+things5Login username password =
+    let
+        variant : String
+        variant =
+            "Things5Login"
+    in
+    Encode.object [ ( variant, Encode.object [ ( "username", Encode.string username ), ( "password", Encode.string password ) ] ) ]
         |> backendPort
 
 

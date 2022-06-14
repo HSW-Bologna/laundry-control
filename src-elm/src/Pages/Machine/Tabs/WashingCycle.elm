@@ -1,4 +1,4 @@
-module Pages.WashingMachineTabs.WashingCycle exposing (..)
+module Pages.Machine.Tabs.WashingCycle exposing (..)
 
 import AUTOGEN_FILE_translations as Intl exposing (getTranslation)
 import AppData.Parameter as Parameter exposing (formatPrice)

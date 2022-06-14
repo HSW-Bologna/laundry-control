@@ -31,7 +31,7 @@ NuovaConfigurazione, Nuova configurazione, New configuration
 ConnessioneLocale, Connessione locale, Local connection
 ConnessioneRemota, Connessione remota, Remote connection
 ParametriMacchina, Parametri macchina, Machine parameters
-ControlloRemoto, Controllo remoto, Remote control
+Macchina, Macchina, Machine
 Lingua, Lingua, Language
 LingueSelezionabiliDaFrontale, Lingue selezionabili da frontale, Available languages
 Logo, Logo, Logo
@@ -305,6 +305,7 @@ Costruttore, Costruttore, Manufacturer
 InviaConfigurazione, Invia configurazione, Send configuration
 ConfigurazioneCorrente, Configurazione corrente:, Current configuration:
 ErroreDiRete, Errore di rete, Network error
+CredenzialiNonValide, Credenziali non valide, Invalid credentials
 Disconnesso, Disconnesso, Disconnected
 Connesso, Connesso, Connected
 ConnessioneFallita, Connessione fallita, Connection failed
@@ -334,3 +335,6 @@ TempoDellAcquaDiFlussaggio, Tempo dell'acqua di flussaggio, Water flux time
 TempoDiErogazioneSapone, Tempo di erogazione sapone, Soap erogation time
 ChiusureOblo, Chiusure oblo', Porthole closed
 ApertureOblo, Aperture oblo', Porthole opened
+DispositiviRemoti, Dispositivi remoti, Remote devices
+Password, Password, Password
+Aggiorna, Aggiorna, Update

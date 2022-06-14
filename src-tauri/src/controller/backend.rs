@@ -1,14 +1,15 @@
 use super::discovery;
 use super::prefs;
 use super::prefs::AppPreferences;
+use super::things5;
 use super::washing_machine as ws;
 use super::washing_machine::WashingMachineConnection;
+use super::Error;
 use futures::future::FutureExt;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use serde_json;
 use serde_json::json;
 use std::sync::mpsc;
-use std::thread;
 use std::time::{Duration, Instant};
 use tauri::Window;
 use tokio::runtime::Runtime;
@@ -16,7 +17,9 @@ use tokio::runtime::Runtime;
 #[derive(Clone, serde::Deserialize)]
 enum BackEndPortMessage {
   Refresh,
+  Things5Login { username: String, password: String },
   WashingMachineHttpConnect(String),
+  WashingMachineThings5Connect { token: String, device_id: String },
   SearchMachines,
   Preferences(AppPreferences),
   SendMachineConfiguration { name: String, bytes: Vec<u8> },
@@ -81,7 +84,6 @@ pub fn task(window: Window) {
     }
   });
 
-  emit_update(&window, json!("null"));
   info!("Starting backend loop");
   let mut update_ts = Instant::now();
   let mut quick_update_ts: Option<Instant> = None;
@@ -96,7 +98,7 @@ pub fn task(window: Window) {
           ws::ConnectionState::Connected {
             state: _,
             configuration: _,
-            stats : _,
+            stats: _,
           } => snackbar_message(&window, "Connesso"),
           ws::ConnectionState::Error => snackbar_message(&window, "ConnessioneFallita"),
         }
@@ -104,11 +106,31 @@ pub fn task(window: Window) {
         send_state(&connection, &window);
         update_ts = Instant::now();
       }
+
+      Ok(WashingMachineThings5Connect { token, device_id }) => {}
+
+      Ok(Things5Login { username, password }) => {
+        info!("Login attempt");
+        match things5::authorize(username, password) {
+          Ok(token) => {
+            info!("Login successful!");
+            window.emit("things5Login", token.clone()).unwrap();
+            if let Ok(devices) = things5::get_devices(token) {
+              window.emit("things5Devices", devices).unwrap();
+            }
+          }
+          Err(Error::Network) | Err(Error::Protocol) => snackbar_message(&window, "ErroreDiRete"),
+          Err(Error::Value) => snackbar_message(&window, "CredenzialiNonValide"),
+        }
+      }
+
       Ok(Refresh) => send_state(&connection, &window),
+
       Ok(Preferences(prefs)) => {
         info!("Saving user preferences: {:?}", prefs);
         prefs::set_usage_preferences(prefs.language, prefs.machine);
       }
+
       Ok(SearchMachines) => {
         info!("Searching for machines...");
         let closure_window = window.clone();
@@ -124,6 +146,7 @@ pub fn task(window: Window) {
           }
         }));
       }
+
       Ok(SendMachineConfiguration { name, bytes }) => {
         report_to_ui(
           &window,
@@ -134,6 +157,7 @@ pub fn task(window: Window) {
         );
         quick_update_ts = Some(Instant::now());
       }
+
       Ok(GetMachineConfiguration(archive)) => {
         match connection
           .as_ref()
@@ -189,7 +213,7 @@ pub fn task(window: Window) {
         quick_update_ts = Some(Instant::now());
       }
 
-      Err(mpsc::RecvTimeoutError::Disconnected) => error!("Disconnected from queue!"),
+      Err(mpsc::RecvTimeoutError::Disconnected) => panic!("Disconnected from queue!"),
       Err(mpsc::RecvTimeoutError::Timeout) => (),
     }
 

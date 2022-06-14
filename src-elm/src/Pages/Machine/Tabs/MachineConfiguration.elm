@@ -1,4 +1,4 @@
-module Pages.WashingMachineTabs.MachineConfiguration exposing (..)
+module Pages.Machine.Tabs.MachineConfiguration exposing (..)
 
 import AUTOGEN_FILE_translations as Intl
 import AppData.WashingMachineConfiguration exposing (MachineConfiguration, MachineParameter, changeName)
