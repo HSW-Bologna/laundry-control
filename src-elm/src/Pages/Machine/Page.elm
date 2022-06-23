@@ -21,11 +21,12 @@ import FontAwesome.Transforms exposing (RepositionTransform(..))
 import Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Pages.Machine.Tabs.LocalDevicesList as LocDevListTab
 import Pages.Machine.Tabs.MachineConfiguration as ParMacTab
 import Pages.Machine.Tabs.RemoteControl as RemControlTab
 import Pages.Machine.Tabs.RemoteDevicesList as RemDevListTab
 import Pages.Machine.Tabs.WashingCycle as WashCycleTab
-import Ports as Ports exposing (decodeEvent, getRemoteMachineConfiguration)
+import Ports as Ports exposing (decodeEvent)
 import Task
 import Time
 import Widget as Widget
@@ -54,7 +55,7 @@ type alias Model =
     { context : Context
     , leftDrawerVisible : Bool
     , rightMenuVisible : Bool
-    , visibleModal : VisibleModal
+    , infoModal : Bool
     , programListExpanded : Bool
     , tabModel : TabModel
     , config : Maybe MachineConfiguration
@@ -76,13 +77,13 @@ init language =
     ( { context = initialContext
       , leftDrawerVisible = False
       , rightMenuVisible = False
-      , visibleModal = NoModal
+      , infoModal = False
       , programListExpanded = False
       , tabModel = NoTab
       , config = Nothing
       , snackbar = Snackbar.init
       , connectionState = WSS.Disconnected
-      , localMachines = Nothing
+      , localMachines = Just []
       , sensorsData = Array.empty
       , things5Token = Nothing
       , things5Devices = []
@@ -96,12 +97,8 @@ type TabModel
     | RemoteControlModel RemControlTab.Model
     | WashCyclesModel WashCycleTab.Model
     | RemoteDevicesListModel RemDevListTab.Model
+    | LocalDevicesListModel LocDevListTab.Model
     | NoTab
-
-
-type VisibleModal
-    = NoModal
-    | IpInput IpAddress
 
 
 
@@ -130,6 +127,11 @@ fromRemoteDevicesListTabModel ( model, tabModel, cmd ) =
     ( { model | tabModel = RemoteDevicesListModel tabModel }, cmd )
 
 
+fromLocalDevicesListTabModel : ( Model, LocDevListTab.Model, Cmd msg ) -> ( Model, Cmd msg )
+fromLocalDevicesListTabModel ( model, tabModel, cmd ) =
+    ( { model | tabModel = LocalDevicesListModel tabModel }, cmd )
+
+
 fromRemoteControlTabModel : ( Model, RemControlTab.Model, Cmd msg ) -> ( Model, Cmd msg )
 fromRemoteControlTabModel ( model, tabModel, cmd ) =
     ( { model | tabModel = RemoteControlModel tabModel }, cmd )
@@ -149,23 +151,29 @@ toRemoteControl =
     RemoteControlModel RemControlTab.buildModel
 
 
+toLocalDevicesList : TabModel
+toLocalDevicesList =
+    LocalDevicesListModel LocDevListTab.buildModel
+
+
 toRemoteDevicesList : TabModel
 toRemoteDevicesList =
     RemoteDevicesListModel RemDevListTab.buildModel
 
 
 type Msg
-    = SaveMachineConfig
-    | LoadMachineFromLocal
-    | CreateNewMachineConfig
+    = MsgSaveMachineConfig
+    | MsgLoadMachineConfig
+    | MsgCreateNewMachineConfig
     | MachineSelected File
     | MachineLoaded Bytes
     | StupidElmMachineLoaded (Array Int)
-    | LeftDrawerToggle
-    | RightMenuToggle
+    | MsgLeftDrawerToggle
+    | MsgRightMenuToggle
     | ProgramListToggle Bool
     | MachineConfigurationMsg ParMacTab.Msg
     | RemoteControlMsg RemControlTab.Msg
+    | LocalDevicesListMsg LocDevListTab.Msg
     | RemoteDevicesListMsg RemDevListTab.Msg
     | WashCyclesMsg WashCycleTab.Msg
     | ChangeTab TabModel
@@ -175,11 +183,10 @@ type Msg
     | Things5Devices Encode.Value
     | StateUpdate Encode.Value
     | IpAddresses Encode.Value
-    | InsertIpAddress
-    | IpAddessChange IpAddress
     | LocalConnectionRequest (Maybe IpAddress)
     | BackendSnackbarMessage String
-    | RefreshDiscovery
+    | MsgAbout
+    | MsgDismissAbout
 
 
 port ipAddresses : (Encode.Value -> msg) -> Sub msg
@@ -215,9 +222,6 @@ update msg model =
         hideMenu m =
             { m | rightMenuVisible = False }
 
-        hideModal m =
-            { m | visibleModal = NoModal }
-
         fillTabWithConfig config m =
             let
                 updatedModel =
@@ -235,7 +239,7 @@ update msg model =
 
         addSensorsData connection m =
             case connection of
-                WSS.Connected { sensors } _ _ ->
+                WSS.Connected _ _ { sensors } _ _ ->
                     let
                         newUnboundedData =
                             Array.push sensors m.sensorsData
@@ -253,15 +257,31 @@ update msg model =
                     m
 
         fillTabWithConnection connection m =
-            case m.tabModel of
-                NoTab ->
+            case ( m.connectionState, connection ) of
+                ( WSS.Error, WSS.Connected _ _ _ _ _ ) ->
                     { m | connectionState = connection, tabModel = toRemoteControl }
+
+                ( WSS.Disconnected, WSS.Connected _ _ _ _ _ ) ->
+                    { m | connectionState = connection, tabModel = toRemoteControl }
+
+                ( WSS.Connected current _ _ _ _, WSS.Connected new _ _ _ _ ) ->
+                    if current /= new then
+                        { m | connectionState = connection, tabModel = toRemoteControl }
+
+                    else
+                        { m | connectionState = connection }
 
                 _ ->
                     { m | connectionState = connection }
     in
     case ( msg, model.tabModel ) of
         -- Global messages
+        ( MsgAbout, _ ) ->
+            ( { model | infoModal = True }, Cmd.none )
+
+        ( MsgDismissAbout, _ ) ->
+            ( { model | infoModal = False }, Cmd.none )
+
         ( TimePassed int, _ ) ->
             ( { model | snackbar = model.snackbar |> Snackbar.timePassed int }, Cmd.none )
 
@@ -320,22 +340,13 @@ update msg model =
             , Cmd.none
             )
 
-        ( InsertIpAddress, _ ) ->
-            ( { model | visibleModal = IpInput localhost }, Ports.searchMachines )
-
-        ( RefreshDiscovery, _ ) ->
-            ( { model | localMachines = Nothing }, Ports.searchMachines )
-
-        ( IpAddessChange ip, _ ) ->
-            ( { model | visibleModal = IpInput ip }, Cmd.none )
-
         ( LocalConnectionRequest (Just ip), _ ) ->
-            ( model |> hideModal |> hideMenu, Ports.washingMachineHttpConnect (toString ip) )
+            ( model |> hideMenu, Ports.washingMachineHttpConnect (toString ip) )
 
         ( LocalConnectionRequest Nothing, _ ) ->
-            ( model |> hideModal |> hideMenu, Cmd.none )
+            ( model |> hideMenu, Cmd.none )
 
-        ( CreateNewMachineConfig, _ ) ->
+        ( MsgCreateNewMachineConfig, _ ) ->
             ( model
                 |> newMessage Intl.NuovaConfigurazioneCreata
                 |> hideMenu
@@ -343,7 +354,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( SaveMachineConfig, _ ) ->
+        ( MsgSaveMachineConfig, _ ) ->
             ( model
                 |> newMessage Intl.ConfigurazioneSalvata
                 |> hideMenu
@@ -351,7 +362,7 @@ update msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
-        ( LoadMachineFromLocal, _ ) ->
+        ( MsgLoadMachineConfig, _ ) ->
             ( model, Select.file [ "application/gzip" ] MachineSelected )
 
         ( MachineSelected file, _ ) ->
@@ -385,7 +396,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( LeftDrawerToggle, _ ) ->
+        ( MsgLeftDrawerToggle, _ ) ->
             ( { model | leftDrawerVisible = not model.leftDrawerVisible } |> hideMenu, Cmd.none )
 
         ( ProgramListToggle toggle, _ ) ->
@@ -398,7 +409,7 @@ update msg model =
             , Cmd.none
             )
 
-        ( RightMenuToggle, _ ) ->
+        ( MsgRightMenuToggle, _ ) ->
             ( { model | rightMenuVisible = not model.rightMenuVisible }, Cmd.none )
 
         ( ChangeTab change, _ ) ->
@@ -439,6 +450,10 @@ update msg model =
             ( fromMachineConfigurationTabModel (ParMacTab.update tabMsg model tabModel) model
             , Cmd.none
             )
+
+        -- Local device list tab messages
+        ( LocalDevicesListMsg tabMsg, LocalDevicesListModel tabModel ) ->
+            fromLocalDevicesListTabModel <| LocDevListTab.update tabMsg model tabModel
 
         -- Remote device list tab messages
         ( RemoteDevicesListMsg tabMsg, RemoteDevicesListModel tabModel ) ->
@@ -520,14 +535,17 @@ view model =
     let
         selectedTab =
             case model.tabModel of
-                RemoteDevicesListModel _ ->
+                LocalDevicesListModel _ ->
                     Just 0
 
-                RemoteControlModel _ ->
+                RemoteDevicesListModel _ ->
                     Just 1
 
-                MachineConfigurationModel _ ->
+                RemoteControlModel _ ->
                     Just 2
+
+                MachineConfigurationModel _ ->
+                    Just 3
 
                 WashCyclesModel _ ->
                     Nothing
@@ -548,6 +566,9 @@ view model =
                 MachineConfigurationModel tabModel ->
                     ParMacTab.view model tabModel |> Ui.map MachineConfigurationMsg
 
+                LocalDevicesListModel tabModel ->
+                    LocDevListTab.view model tabModel |> Ui.map LocalDevicesListMsg
+
                 RemoteDevicesListModel tabModel ->
                     RemDevListTab.view model tabModel |> Ui.map RemoteDevicesListMsg
 
@@ -562,10 +583,10 @@ view model =
 
         menuOptions =
             AppWidgets.rightMenu model.context
-                [ ( Intl.CaricaConfigurazione, Just LoadMachineFromLocal )
-                , ( Intl.SalvaConfigurazione, Maybe.map (always SaveMachineConfig) model.config )
-                , ( Intl.NuovaConfigurazione, Just CreateNewMachineConfig )
-                , ( Intl.ConnessioneLocale, Just InsertIpAddress )
+                [ ( Intl.CaricaConfigurazione, Just MsgLoadMachineConfig )
+                , ( Intl.SalvaConfigurazione, Maybe.map (always MsgSaveMachineConfig) model.config )
+                , ( Intl.NuovaConfigurazione, Just MsgCreateNewMachineConfig )
+                , ( Intl.Informazioni, Just MsgAbout )
                 ]
 
         rightMenuAddition =
@@ -576,12 +597,11 @@ view model =
                 []
 
         modalAddition =
-            case model.visibleModal of
-                NoModal ->
-                    []
+            if model.infoModal then
+                AppWidgets.aboutDialog model.context MsgDismissAbout
 
-                IpInput ip ->
-                    AppWidgets.ipDialog model.context model.localMachines ip IpAddessChange LocalConnectionRequest RefreshDiscovery
+            else
+                []
 
         cycles =
             Maybe.map
@@ -614,8 +634,8 @@ view model =
                             |> Ui.text
                             |> Ui.el []
                     , deviceClass = Ui.Desktop
-                    , openLeftSheet = Just LeftDrawerToggle
-                    , openRightSheet = Just RightMenuToggle
+                    , openLeftSheet = Just MsgLeftDrawerToggle
+                    , openRightSheet = Just MsgRightMenuToggle
                     , openTopSheet = Nothing
                     , primaryActions =
                         []
@@ -632,6 +652,7 @@ view model =
                         , selectedCycle = selectedCycle
                         , cycles = cycles
                         , goToRemoteControl = ChangeTab toRemoteControl
+                        , goToLocalDeviceList = ChangeTab toLocalDevicesList
                         , goToRemoteDeviceList = ChangeTab toRemoteDevicesList
                         , goToCycle = ChangeTabCycle
                         }

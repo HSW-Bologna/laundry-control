@@ -198,7 +198,7 @@ boolOptions =
 
 
 celsius =
-    "°"
+    "°C"
 
 
 
@@ -1297,8 +1297,15 @@ extractArchive archiveBytes =
             textFileContents indexFileName >> Maybe.map (String.split "\n")
 
         getWashCycle : String -> List ( Tar.Metadata, Tar.Data ) -> Maybe WashingCycle
-        getWashCycle name =
-            binaryFileContents (cycleFileName name) >> Maybe.andThen (Decode.decode washCycleDecoder)
+        getWashCycle name list =
+            let
+                res =
+                    binaryFileContents (cycleFileName name) >> Maybe.andThen (Decode.decode washCycleDecoder)
+
+                _ =
+                    Debug.log "hey" (res list)
+            in
+            res list
 
         fileList =
             Inflate.inflateGZip archiveBytes
@@ -1398,7 +1405,20 @@ encodeString =
 
 cleanStringFromNull : String -> String
 cleanStringFromNull s =
-    String.toList s |> List.filter (\c -> Char.toCode c /= 0) |> String.fromList
+    String.toList s
+        |> List.foldl
+            (\c ( stop, res ) ->
+                if stop then
+                    ( stop, res )
+
+                else if Char.toCode c /= 0 then
+                    ( stop, res ++ [ c ] )
+
+                else
+                    ( True, res )
+            )
+            ( False, [] )
+        |> (\(_, res) -> String.fromList res)
 
 
 limitedStringDecoder : Decode.Decoder String

@@ -336,5 +336,13 @@ TempoDiErogazioneSapone, Tempo di erogazione sapone, Soap erogation time
 ChiusureOblo, Chiusure oblo', Porthole closed
 ApertureOblo, Aperture oblo', Porthole opened
 DispositiviRemoti, Dispositivi remoti, Remote devices
+DispositiviLocali, Dispositivi locali, Local devices
 Password, Password, Password
 Aggiorna, Aggiorna, Update
+Attivo, Attivo, Active
+NonAttivo, Non attivo, Inactive
+ScaricaConfigurazione, Scarica configurazione, Download configuration
+Connetti, Connetti, Connect
+Informazioni, Informazioni, About
+Versione, Versione, Version
+Esci, Logout, Logout

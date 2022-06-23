@@ -1,7 +1,6 @@
 use super::discovery;
 use super::prefs;
-use super::prefs::AppPreferences;
-use super::things5;
+use super::things5_api;
 use super::washing_machine as ws;
 use super::washing_machine::WashingMachineConnection;
 use super::Error;
@@ -21,9 +20,8 @@ enum BackEndPortMessage {
   WashingMachineHttpConnect(String),
   WashingMachineThings5Connect { token: String, device_id: String },
   SearchMachines,
-  Preferences(AppPreferences),
-  SendMachineConfiguration { name: String, bytes: Vec<u8> },
-  GetMachineConfiguration(String),
+  SendCurrentMachineConfiguration(Vec<u8>),
+  GetCurrentMachineConfiguration,
   SelectMachineConfiguration(String),
   StartProgram(u16),
   Restart,
@@ -59,14 +57,6 @@ pub fn task(window: Window) {
   let rt = Runtime::new().expect("Failed to build pool");
   let mut connection: Option<Box<dyn ws::WashingMachineConnection>> = None;
 
-  if let Some(preferences) = prefs::get_user_preferences() {
-    info!(
-      "Saved preferences: {} {}",
-      preferences.language, preferences.machine
-    );
-    window.emit("savedPreferences", preferences).ok();
-  }
-
   let timeout = Duration::from_millis(100);
   let (tx, rx) = mpsc::channel::<BackEndPortMessage>();
 
@@ -84,6 +74,16 @@ pub fn task(window: Window) {
     }
   });
 
+  if let Some(token) = prefs::get_token() {
+    match things5_api::get_devices(&token) {
+      Ok(devices) => {
+        window.emit("things5Login", token.clone()).unwrap();
+        window.emit("things5Devices", devices).unwrap();
+      }
+      Err(_) => (),
+    }
+  }
+
   info!("Starting backend loop");
   let mut update_ts = Instant::now();
   let mut quick_update_ts: Option<Instant> = None;
@@ -93,30 +93,53 @@ pub fn task(window: Window) {
     match rx.recv_timeout(timeout) {
       Ok(WashingMachineHttpConnect(ip)) => {
         info!("connecting...");
-        let http_connection = ws::http::WashingMachineHttpConnection::new(ip);
+        let http_connection = ws::local::Connection::new(ip);
         match http_connection.get_connection_state() {
           ws::ConnectionState::Connected {
+            name: _,
+            active: _,
             state: _,
             configuration: _,
             stats: _,
-          } => snackbar_message(&window, "Connesso"),
+          } => {
+            snackbar_message(&window, "Connesso");
+            connection = Some(Box::new(http_connection));
+            send_state(&connection, &window);
+            update_ts = Instant::now();
+          }
           ws::ConnectionState::Error => snackbar_message(&window, "ConnessioneFallita"),
         }
-        connection = Some(Box::new(http_connection));
-        send_state(&connection, &window);
-        update_ts = Instant::now();
       }
 
-      Ok(WashingMachineThings5Connect { token, device_id }) => {}
+      Ok(WashingMachineThings5Connect { token, device_id }) => {
+        info!("connecting to things5");
+        let things5_connection = ws::things5::Connection::new(token, device_id);
+        match things5_connection.get_connection_state() {
+          ws::ConnectionState::Connected {
+            name: _,
+            active: _,
+            state: _,
+            configuration: _,
+            stats: _,
+          } => {
+            snackbar_message(&window, "Connesso");
+            connection = Some(Box::new(things5_connection));
+            send_state(&connection, &window);
+            update_ts = Instant::now();
+          }
+          ws::ConnectionState::Error => snackbar_message(&window, "ConnessioneFallita"),
+        }
+      }
 
       Ok(Things5Login { username, password }) => {
         info!("Login attempt");
-        match things5::authorize(username, password) {
+        match things5_api::authorize(username.as_str(), password.as_str()) {
           Ok(token) => {
             info!("Login successful!");
             window.emit("things5Login", token.clone()).unwrap();
-            if let Ok(devices) = things5::get_devices(token) {
+            if let Ok(devices) = things5_api::get_devices(token.as_str()) {
               window.emit("things5Devices", devices).unwrap();
+              prefs::set_token(token);
             }
           }
           Err(Error::Network) | Err(Error::Protocol) => snackbar_message(&window, "ErroreDiRete"),
@@ -125,11 +148,6 @@ pub fn task(window: Window) {
       }
 
       Ok(Refresh) => send_state(&connection, &window),
-
-      Ok(Preferences(prefs)) => {
-        info!("Saving user preferences: {:?}", prefs);
-        prefs::set_usage_preferences(prefs.language, prefs.machine);
-      }
 
       Ok(SearchMachines) => {
         info!("Searching for machines...");
@@ -147,23 +165,19 @@ pub fn task(window: Window) {
         }));
       }
 
-      Ok(SendMachineConfiguration { name, bytes }) => {
+      Ok(SendCurrentMachineConfiguration(bytes)) => {
         report_to_ui(
           &window,
-          connection.as_ref().unwrap().send_machine_configuration(
-            String::from(name.trim_end_matches(char::from(0))),
-            bytes.into(),
-          ),
+          connection
+            .as_ref()
+            .unwrap()
+            .send_machine_configuration(bytes.into()),
         );
         quick_update_ts = Some(Instant::now());
       }
 
-      Ok(GetMachineConfiguration(archive)) => {
-        match connection
-          .as_ref()
-          .unwrap()
-          .get_machine_configuration(archive)
-        {
+      Ok(GetCurrentMachineConfiguration) => {
+        match connection.as_ref().unwrap().get_machine_configuration() {
           Ok(bytes) => {
             window.emit("remoteMachineLoaded", bytes).ok();
             snackbar_message(&window, "Successo");

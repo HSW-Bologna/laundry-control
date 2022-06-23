@@ -5,8 +5,6 @@ import AppData.Things5 exposing (Device)
 import AppWidgets.AppWidgets as AppWidgets
 import Context exposing (Context, translate)
 import Element as Ui
-import Element.Background as Background
-import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Ports
@@ -32,30 +30,34 @@ buildModel =
 
 
 type Msg
-    = UsernameInput String
-    | PasswordInput String
-    | LoginButton
-    | RefreshButton
-    | ConnectButton String
+    = MsgUsernameInput String
+    | MsgPasswordInput String
+    | MsgLoginButton
+    | MsgRefreshButton
+    | MsgConnectButton String String
+    | MsgLogout
 
 
 update : Msg -> SharedModel a -> Model -> ( SharedModel a, Model, Cmd msg )
 update msg sharedModel model =
     case msg of
-        UsernameInput string ->
+        MsgUsernameInput string ->
             ( sharedModel, { model | username = string }, Cmd.none )
 
-        PasswordInput string ->
+        MsgPasswordInput string ->
             ( sharedModel, { model | password = string }, Cmd.none )
 
-        LoginButton ->
+        MsgLoginButton ->
             ( sharedModel, model, Ports.things5Login model.username model.password )
 
-        ConnectButton id ->
+        MsgConnectButton token id ->
+            ( sharedModel, model, Ports.washingMachineThings5Connect token id )
+
+        MsgRefreshButton ->
             ( sharedModel, model, Cmd.none )
 
-        RefreshButton ->
-            ( sharedModel, model, Cmd.none )
+        MsgLogout ->
+            ( { sharedModel | things5Token = Nothing }, model, Cmd.none )
 
 
 
@@ -64,58 +66,36 @@ update msg sharedModel model =
 
 view : SharedModel a -> Model -> Ui.Element Msg
 view { context, things5Token, things5Devices } { username, password } =
-    let
-        primaryColor =
-            Ui.rgba255 0x62 0x00 0xEE 1.0
-
-        primaryColorLight =
-            Ui.rgba255 0x62 0x00 0xEE 0.8
-
-        primaryColorLighter =
-            Ui.rgba255 0x62 0x00 0xEE 0.4
-
-        selectionButton text device =
-            Input.button
-                [ Ui.padding 48
-                , Border.width 4
-                , Border.color primaryColor
-                , Border.rounded 16
-                , Ui.mouseDown
-                    [ Background.color primaryColorLighter
-                    , Font.color <| Ui.rgb 0 0 0
-                    ]
-                , Ui.mouseOver [ Background.color primaryColorLight ]
-                , Background.color primaryColor
-                , Font.color <| Ui.rgb 1 1 1
-                , Font.size 32
-                ]
-                { onPress = Just (ConnectButton device), label = Ui.text text }
-    in
-    Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 16 ]
+    Ui.column
+        [ Ui.width Ui.fill
+        , Ui.height Ui.fill
+        , Ui.padding 16
+        , Ui.spacing 16
+        ]
         [ Ui.paragraph [ Font.size 32, Ui.centerX, Ui.width Ui.fill ] [ Ui.text (translate Intl.DispositiviRemoti context) ]
         , case things5Token of
             Nothing ->
                 Ui.column [ Ui.centerX, Ui.centerY, Ui.spacing 32 ]
-                    [ Input.text [ Ui.width <| Ui.px 240 ]
-                        { onChange = UsernameInput
+                    [ Input.text [ Ui.width <| Ui.px 320 ]
+                        { onChange = MsgUsernameInput
                         , text = username
                         , placeholder = Just <| Input.placeholder [] (Ui.text <| translate Intl.Utente context)
-                        , label = Input.labelLeft [] (Ui.el [ Ui.width <| Ui.px 160 ] <| Ui.text <| translate Intl.Utente context)
+                        , label = Input.labelLeft [] (Ui.el [ Ui.width <| Ui.px 140 ] <| Ui.text <| translate Intl.Utente context)
                         }
-                    , Input.currentPassword [ Ui.width <| Ui.px 240 ]
-                        { onChange = PasswordInput
+                    , Input.currentPassword [ Ui.width <| Ui.px 320 ]
+                        { onChange = MsgPasswordInput
                         , text = password
                         , placeholder = Just <| Input.placeholder [] (Ui.text <| translate Intl.Password context)
-                        , label = Input.labelLeft [] (Ui.el [ Ui.width <| Ui.px 160 ] <| Ui.text <| translate Intl.Password context)
+                        , label = Input.labelLeft [] (Ui.el [ Ui.width <| Ui.px 140 ] <| Ui.text <| translate Intl.Password context)
                         , show = False
                         }
                     , AppWidgets.textButton
                         (translate Intl.Conferma context)
-                        (if username == "" && password == "" then
+                        (if username == "" || password == "" then
                             Nothing
 
                          else
-                            Just LoginButton
+                            Just MsgLoginButton
                         )
                         |> Ui.el [ Ui.centerX ]
                     ]
@@ -124,10 +104,11 @@ view { context, things5Token, things5Devices } { username, password } =
                 Ui.el
                     [ Ui.width Ui.fill
                     , Ui.height Ui.fill
-                    , Ui.inFront <| Ui.el [ Ui.alignBottom, Ui.alignRight ] <| AppWidgets.textButton (translate Intl.Aggiorna context) (Just RefreshButton)
+                    , Ui.inFront <| Ui.el [ Ui.alignTop, Ui.alignRight ] <| AppWidgets.textButton (translate Intl.Esci context) (Just MsgLogout)
+                    , Ui.inFront <| Ui.el [ Ui.alignBottom, Ui.alignRight ] <| AppWidgets.textButton (translate Intl.Aggiorna context) (Just MsgRefreshButton)
                     ]
                 <|
                     Ui.wrappedRow [ Ui.centerX, Ui.spacing 32, Ui.padding 64 ] <|
-                        List.map (\d -> selectionButton d.name d.id) things5Devices
+                        List.map (\d -> AppWidgets.machineSelectionButton (MsgConnectButton token d.id) d.name) things5Devices
         ]
         |> AppWidgets.scrollbarYEl [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16 ]

@@ -9,13 +9,13 @@ pub struct StatisticsPair {
   total: Statistics,
 }
 
-pub struct WashingMachineHttpConnection {
+pub struct Connection {
   ip: String,
   agent: Client,
   connection_state: ConnectionState,
 }
 
-impl WashingMachineHttpConnection {
+impl Connection {
   pub fn new(ip: String) -> Self {
     let agent: Client = ClientBuilder::new()
       .timeout(std::time::Duration::from_secs(4))
@@ -32,10 +32,12 @@ impl WashingMachineHttpConnection {
 
   fn first_connection(ip: &String, agent: &Client) -> ConnectionState {
     match json_get(ip, agent, "state")
-      .and_then(|state| json_get(ip, agent, "machine").map(|configuration| (state, configuration)))
+      .and_then(|state| json_get(ip, agent, "info").map(|configuration| (state, configuration)))
       .and_then(|(state, configuration)| {
         json_get::<StatisticsPair>(ip, agent, "statistics").map(|stats| {
           ConnectionState::Connected {
+            name: ip.clone(),
+            active: true,
             state,
             configuration,
             stats: stats.total,
@@ -77,15 +79,15 @@ impl WashingMachineHttpConnection {
   }
 }
 
-impl WashingMachineConnection for WashingMachineHttpConnection {
+impl WashingMachineConnection for Connection {
   fn refresh_data(self: &mut Self) {
     self.connection_state = Self::first_connection(&self.ip, &self.agent);
   }
 
-  fn send_machine_configuration(self: &Self, archive: String, data: Vec<u8>) -> WSResult<()> {
+  fn send_machine_configuration(self: &Self, data: Vec<u8>) -> WSResult<()> {
     self
       .agent
-      .post(format!("http://{}/machine/{}", &self.ip, encode(archive.as_str())).as_str())
+      .post(format!("http://{}/machine", &self.ip).as_str())
       .body(data)
       .send()
       .map_err(|_| Error::Network)
@@ -98,14 +100,17 @@ impl WashingMachineConnection for WashingMachineHttpConnection {
       .map_err(|_| Error::Network)
   }
 
-  fn get_machine_configuration(self: &Self, archive: String) -> WSResult<Vec<u8>> {
+  fn get_machine_configuration(self: &Self) -> WSResult<Vec<u8>> {
     let mut resp = self
       .agent
-      .get(format!("http://{}/machine/{}", &self.ip, encode(archive.as_str())).as_str())
+      .get(format!("http://{}/machine", &self.ip).as_str())
       .send()
       .map_err(|_| Error::Network)?;
 
-    if let Some(header) = resp.headers().get("Content-Length") {
+    if !resp.status().is_success() {
+      log::warn!("Failed to download machine config");
+      Err(Error::Protocol)
+    } else if let Some(header) = resp.headers().get("Content-Length") {
       let len = header.len();
       let mut bytes: Vec<u8> = Vec::with_capacity(len);
       resp.copy_to(&mut bytes).map_err(|_| Error::Protocol)?;

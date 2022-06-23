@@ -199,6 +199,35 @@ step context parmac toggle selected expanded index s =
 -- GLOBAL WIDGETS
 
 
+machineSelectionButton : msg -> String -> Ui.Element msg
+machineSelectionButton msg text =
+    let
+        primaryColor =
+            Ui.rgba255 0x62 0x00 0xEE 1.0
+
+        primaryColorLight =
+            Ui.rgba255 0x62 0x00 0xEE 0.8
+
+        primaryColorLighter =
+            Ui.rgba255 0x62 0x00 0xEE 0.4
+    in
+    Input.button
+        [ Ui.padding 48
+        , Border.width 4
+        , Border.color primaryColor
+        , Border.rounded 16
+        , Ui.mouseDown
+            [ Background.color primaryColorLighter
+            , Font.color <| Ui.rgb 0 0 0
+            ]
+        , Ui.mouseOver [ Background.color primaryColorLight ]
+        , Background.color primaryColor
+        , Font.color <| Ui.rgb 1 1 1
+        , Font.size 32
+        ]
+        { onPress = Just msg, label = Ui.paragraph [ Ui.width <| Ui.maximum 280 Ui.fill ] [ Ui.text text ] }
+
+
 languageSelect : Context -> (String -> msg) -> Ui.Element msg
 languageSelect context msg =
     Ui.html <|
@@ -217,6 +246,7 @@ type alias DrawerConfig msg =
     { context : Context
     , selected : Maybe Int
     , goToRemoteControl : msg
+    , goToLocalDeviceList : msg
     , goToRemoteDeviceList : msg
     , goToConfig : Maybe msg
     , selectedCycle : Maybe Int
@@ -228,7 +258,7 @@ type alias DrawerConfig msg =
 
 
 leftDrawer : DrawerConfig msg -> Ui.Element msg
-leftDrawer { context, selected, goToConfig, cyclesExpanded, toggleCycles, cycles, selectedCycle, goToCycle, goToRemoteControl, goToRemoteDeviceList } =
+leftDrawer { context, selected, goToConfig, cyclesExpanded, toggleCycles, cycles, selectedCycle, goToCycle, goToRemoteControl, goToLocalDeviceList, goToRemoteDeviceList } =
     let
         tabOption ( name, msg ) =
             { text = translate name context
@@ -236,7 +266,8 @@ leftDrawer { context, selected, goToConfig, cyclesExpanded, toggleCycles, cycles
             }
 
         mainOptions =
-            [ ( Intl.DispositiviRemoti, Just goToRemoteDeviceList )
+            [ ( Intl.DispositiviLocali, Just goToLocalDeviceList )
+            , ( Intl.DispositiviRemoti, Just goToRemoteDeviceList )
             , ( Intl.Macchina, Just goToRemoteControl )
             , ( Intl.ParametriMacchina, goToConfig )
             ]
@@ -292,56 +323,20 @@ rightMenu context options =
         |> Ui.el (Ui.alignRight :: Style.border)
 
 
-ipDialog : Context -> Maybe (List ( IpAddress, String )) -> IpAddress -> (IpAddress -> msg) -> (Maybe IpAddress -> msg) -> msg -> List (Ui.Attribute msg)
-ipDialog context available ip msg submit refresh =
-    let
-        button text event align =
-            Ui.el [ align ] <|
-                Widget.textButton (Material.textButton Style.palette) { text = text, onPress = Just event }
-    in
-    { onDismiss = Just <| submit Nothing
+aboutDialog : Context -> msg -> List (Ui.Attribute msg)
+aboutDialog context dismiss =
+    { onDismiss = Just dismiss
     , content =
         Ui.el
             (Style.modal 480)
             (Ui.column [ Ui.height Ui.fill, Ui.width Ui.fill, Ui.spacing 16 ]
                 [ Ui.text <|
-                    translate Intl.InserisciIp
+                    translate Intl.Informazioni
                         context
-                , Ui.row [ Ui.centerX, Ui.spacing 2 ] <|
-                    List.intersperse (Ui.text ".") <|
-                        List.indexedMap
-                            (\i val ->
-                                Input.text []
-                                    { onChange = \s -> msg <| changePart ip i (Maybe.withDefault 0 <| String.toInt s)
-                                    , text = String.fromInt val
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "ip"
-                                    }
-                            )
-                            (asList ip)
-                , case available of
-                    Nothing ->
-                        Ui.el [ Ui.centerX ] <|
-                            Widget.circularProgressIndicator (Material.progressIndicator Style.palette) Nothing
-
-                    Just availableList ->
-                        availableList
-                            |> List.map
-                                (\( x, node ) ->
-                                    Widget.fullBleedItem (Material.fullBleedItem Style.palette)
-                                        { onPress = Just <| msg x
-                                        , icon = always Ui.none
-                                        , text = IpAddress.toString x ++ " : " ++ node
-                                        }
-                                )
-                            |> Widget.itemList (Material.cardColumn Style.palette)
-                            |> Ui.el [ Ui.height <| Ui.maximum 240 Ui.fill, Ui.width Ui.fill ]
-                , Ui.row
-                    [ Ui.alignBottom, Ui.width Ui.fill ]
-                    [ button "cancella" (submit Nothing) Ui.alignLeft
-                    , iconButton SolidIcons.recycle refresh "refresh" |> Ui.el [ Ui.centerX ]
-                    , button "conferma" (submit <| Just ip) Ui.alignRight
+                , Ui.row [ Ui.centerX, Ui.spacing 2 ]
+                    [ Ui.text <| translate Intl.Versione context ++ " 0.1.0"
                     ]
+                , Widget.textButton (Material.textButton Style.palette) { text = translate Intl.Conferma context, onPress = Just dismiss } |> Ui.el [ Ui.centerX ]
                 ]
             )
     }

@@ -68,7 +68,7 @@ type alias Configuration =
 
 type ConnectionState
     = Disconnected
-    | Connected State Configuration Statistics
+    | Connected String Bool State Configuration Statistics
     | Error
 
 
@@ -149,6 +149,8 @@ connectionStateUpdateDecoder =
     Decode.oneOf
         [ Decode.null Disconnected
         , Decode.succeed Connected
+            |> Pipeline.requiredAt [ "Connected", "name" ] Decode.string
+            |> Pipeline.requiredAt [ "Connected", "active" ] Decode.bool
             |> Pipeline.requiredAt [ "Connected", "state" ] washingMachineStateDecoder
             |> Pipeline.requiredAt [ "Connected", "configuration" ] configurationDecoder
             |> Pipeline.requiredAt [ "Connected", "stats" ] statisticsDecoder

@@ -14,10 +14,8 @@ import Chart.Item
 import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
-import FontAwesome.Icon as FAIcon
 import FontAwesome.Solid as SolidIcons
 import Html
-import Html.Attributes
 import Ports as Ports
 import Widget as Widget
 import Widget.Material as Material
@@ -51,8 +49,7 @@ buildModel =
 
 
 type Msg
-    = LoadConfig String
-    | SelectConfig String
+    = LoadConfig
     | SendConfig WMC.MachineConfiguration
     | StartProgram Int
     | RestartProgram
@@ -70,17 +67,13 @@ type Msg
 update : Msg -> SharedModel a -> Model -> ( SharedModel a, Model, Cmd msg )
 update msg sharedModel model =
     case msg of
-        LoadConfig archive ->
-            ( sharedModel, model, Ports.getRemoteMachineConfiguration archive )
-
-        SelectConfig archive ->
-            ( sharedModel, model, Ports.selectRemoteMachineConfiguration archive )
+        LoadConfig ->
+            ( sharedModel, model, Ports.getCurrentMachineConfiguration )
 
         SendConfig archive ->
             ( sharedModel
             , model
-            , Ports.sendRemoteMachineConfiguration
-                archive.parmac.name
+            , Ports.sendCurrentMachineConfiguration
                 (Array.fromList <| Bytes.toByteValues <| WMC.createArchive archive)
             )
 
@@ -140,10 +133,9 @@ topPanelHeight =
 view : SharedModel a -> Model -> Ui.Element Msg
 view ({ connectionState, context } as sharedModel) model =
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 16 ]
-        [ Ui.paragraph [ Font.size 32, Ui.centerX ] [ Ui.text (translate Intl.Macchina context) ]
-        , case connectionState of
-            Connected state configuration stats ->
-                machineView sharedModel model state configuration stats
+        [ case connectionState of
+            Connected name active state configuration stats ->
+                machineView sharedModel model name active state configuration stats
 
             Error ->
                 Ui.paragraph [ Ui.width Ui.fill ] <| [ Ui.text <| translate Intl.ErroreDiRete context ]
@@ -154,11 +146,11 @@ view ({ connectionState, context } as sharedModel) model =
         |> AppWidgets.scrollbarYEl [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16 ]
 
 
-machineView : SharedModel a -> Model -> WMS.State -> WMS.Configuration -> WMS.Statistics -> Ui.Element Msg
-machineView { context, config, sensorsData } { hoveringTemperature, hoveringLevel, hoveringSpeed, hoveringDetergents, statsExpanded } { state, credit, cycleNumber, stepType, portholeOpen, alarmCode, cycleRemaining, stepRemaining, stepNumber, stepCount } { machines, name, programs } stats =
+machineView : SharedModel a -> Model -> String -> Bool -> WMS.State -> WMS.Configuration -> WMS.Statistics -> Ui.Element Msg
+machineView { context, config, sensorsData } { hoveringTemperature, hoveringLevel, hoveringSpeed, hoveringDetergents, statsExpanded } name active { state, credit, cycleNumber, stepType, portholeOpen, alarmCode, cycleRemaining, stepRemaining, stepNumber, stepCount } configuration stats =
     let
         washType =
-            Array.get cycleNumber programs |> Maybe.map .washType |> Maybe.withDefault 0
+            Array.get cycleNumber configuration.programs |> Maybe.map .washType |> Maybe.withDefault 0
 
         formatTime time =
             let
@@ -304,7 +296,7 @@ machineView { context, config, sensorsData } { hoveringTemperature, hoveringLeve
         leftControlColumn =
             case state of
                 WMS.Stopped ->
-                    programList programs StartProgram
+                    programList configuration.programs StartProgram
                         |> Ui.el [ Ui.width Ui.fill, Ui.height topPanelHeight, Ui.scrollbarY, Ui.spacing 16 ]
 
                 _ ->
@@ -420,14 +412,26 @@ machineView { context, config, sensorsData } { hoveringTemperature, hoveringLeve
                 |> Widget.itemList (Material.cardColumn Style.palette)
     in
     Ui.column [ Ui.width Ui.fill, Ui.spacing 32 ]
-        [ controlPanel
+        [ Ui.column [ Ui.spacing 8 ]
+            [ Ui.paragraph [ Font.size 32 ] [ Ui.text <| name ]
+            , Ui.paragraph [ Font.size 24 ]
+                [ Ui.text <|
+                    translate
+                        (if active then
+                            Intl.Attivo
+
+                         else
+                            Intl.NonAttivo
+                        )
+                        context
+                ]
+            ]
+        , controlPanel
         , Style.br
         , statsPanel stats
         , Style.br
         , Ui.column [ Ui.centerX, Ui.spacing 32 ]
-            [ Ui.paragraph [] [ Ui.text <| translate Intl.ConfigurazioneCorrente context ++ " " ++ name ]
+            [ AppWidgets.textButton (translate Intl.ScaricaConfigurazione context ++ " " ++ configuration.name) (Just LoadConfig)
             , sendConfigBtn
-            , archiveList machines LoadConfig SelectConfig
             ]
-        , Style.br
         ]

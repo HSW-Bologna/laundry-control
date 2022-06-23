@@ -1,24 +1,23 @@
 port module Ports exposing
     ( clearAlarms
     , decodeEvent
-    , getRemoteMachineConfiguration
+    , getCurrentMachineConfiguration
     , navigateHome
     , navigateToPage
     , pauseProgram
-    , preferences
     , restartProgram
     , searchMachines
     , selectRemoteMachineConfiguration
-    , sendRemoteMachineConfiguration
+    , sendCurrentMachineConfiguration
     , startProgram
     , stopProgram
     , things5Login
     , washingMachineHttpConnect
+    , washingMachineThings5Connect
     )
 
 import AUTOGEN_FILE_translations exposing (Language, languageString)
 import Array exposing (Array)
-import Dict
 import Json.Decode as Decode
 import Json.Encode as Encode
 
@@ -47,26 +46,6 @@ navigateToPage page language =
 port backendPort : Encode.Value -> Cmd msg
 
 
-preferences : { language : String, machine : String } -> Cmd msg
-preferences { language, machine } =
-    let
-        languageKey : String
-        languageKey =
-            "language"
-
-        machineKey : String
-        machineKey =
-            "machine"
-
-        variant : String
-        variant =
-            "Preferences"
-    in
-    Encode.dict identity Encode.string (Dict.fromList [ ( languageKey, language ), ( machineKey, machine ) ])
-        |> (\v -> Encode.object [ ( variant, v ) ])
-        |> backendPort
-
-
 searchMachines : Cmd msg
 searchMachines =
     let
@@ -89,6 +68,17 @@ washingMachineHttpConnect machine =
         |> backendPort
 
 
+washingMachineThings5Connect : String -> String -> Cmd msg
+washingMachineThings5Connect token device_id =
+    let
+        variant : String
+        variant =
+            "WashingMachineThings5Connect"
+    in
+    Encode.object [ ( variant, Encode.object [ ( "token", Encode.string token ), ( "device_id", Encode.string device_id ) ] ) ]
+        |> backendPort
+
+
 things5Login : String -> String -> Cmd msg
 things5Login username password =
     let
@@ -100,25 +90,25 @@ things5Login username password =
         |> backendPort
 
 
-getRemoteMachineConfiguration : String -> Cmd msg
-getRemoteMachineConfiguration machine =
+getCurrentMachineConfiguration : Cmd msg
+getCurrentMachineConfiguration =
     let
         variant : String
         variant =
-            "GetMachineConfiguration"
+            "GetCurrentMachineConfiguration"
     in
-    Encode.object [ ( variant, Encode.string machine ) ]
+    Encode.string variant
         |> backendPort
 
 
-sendRemoteMachineConfiguration : String -> Array Int -> Cmd msg
-sendRemoteMachineConfiguration name bytes =
+sendCurrentMachineConfiguration : Array Int -> Cmd msg
+sendCurrentMachineConfiguration bytes =
     let
         variant : String
         variant =
-            "SendMachineConfiguration"
+            "SendCurrentMachineConfiguration"
     in
-    Encode.object [ ( variant, Encode.object [ ( "name", Encode.string name ), ( "bytes", Encode.array Encode.int bytes ) ] ) ]
+    Encode.object [ ( variant, Encode.array Encode.int bytes ) ]
         |> backendPort
 
 
