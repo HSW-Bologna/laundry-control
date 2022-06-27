@@ -15,11 +15,15 @@ pub struct Device {
 
 #[derive(Deserialize)]
 struct Things5State {
-  id: String,
-  end_time: String,
-  metadata: Option<String>,
+  #[serde(rename = "id")]
+  _id: String,
+  #[serde(rename = "end_time")]
+  _end_time: String,
+  #[serde(rename = "metadata")]
+  _metadata: Option<String>,
   name: String,
-  start_time: String,
+  #[serde(rename = "start_time")]
+  _start_time: String,
   value: String,
 }
 

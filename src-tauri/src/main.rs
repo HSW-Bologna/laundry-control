@@ -10,7 +10,7 @@ use simplelog::*;
 #[tauri::command]
 fn init_tasks(_app: AppHandle, window: Window) -> Result<(), String> {
   log::info!("Spawning backend thread");
-  thread::spawn(move || controller::backend::task(window));
+  thread::spawn(move || controller::task(window));
   Ok(())
 }
 
