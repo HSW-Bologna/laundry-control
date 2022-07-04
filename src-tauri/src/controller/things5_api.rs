@@ -1,4 +1,6 @@
-use super::washing_machine::{State, Statistics};
+use super::washing_machine::{
+  Configuration, ProgramPreview, State as WashingMachineState, Statistics,
+};
 use super::Error;
 use reqwest;
 use reqwest::blocking::{Client, ClientBuilder};
@@ -14,7 +16,7 @@ pub struct Device {
 }
 
 #[derive(Deserialize)]
-struct Things5State {
+struct State {
   #[serde(rename = "id")]
   _id: String,
   #[serde(rename = "end_time")]
@@ -25,6 +27,27 @@ struct Things5State {
   #[serde(rename = "start_time")]
   _start_time: String,
   value: String,
+}
+
+#[derive(Deserialize)]
+struct ParameterVariable {
+  name: String,
+  value: String,
+  #[serde(rename = "type")]
+  _type: String,
+}
+
+#[derive(Deserialize)]
+struct Variables {
+  name: String,
+  variables: Vec<ParameterVariable>,
+}
+
+#[derive(Deserialize)]
+struct WriteResponse {
+  assets: Vec<Variables>,
+  #[serde(default)]
+  errors: Vec<String>,
 }
 
 pub fn refresh_data_ingestion(token: &str, device_id: &str) -> Result<(), Error> {
@@ -52,12 +75,158 @@ pub fn refresh_data_ingestion(token: &str, device_id: &str) -> Result<(), Error>
     token,
     value,
   )
+  .map(|_| ())
+}
+
+pub fn get_current_machine(token: &str, device_id: &str) -> Result<Vec<u8>, Error> {
+  let value: serde_json::Value = serde_json::json!({
+      "assets" : [
+          {
+              "name" :"configuration",
+              "values" : [
+                  {
+                      "name" : "machine",
+                      "type" : "integer",
+                      "value": "",
+                  }
+              ]
+          }
+      ]
+  });
+
+  let response = post_request(
+    format!(
+      "https://api.things5.digital/v1/devices/{}/parameters",
+      device_id
+    )
+    .as_str(),
+    token,
+    value,
+  )?;
+
+  let json_response: WriteResponse =
+    serde_json::from_str(response.as_str()).map_err(|e| Error::Json(e.to_string()))?;
+
+  for asset in json_response.assets {
+    if asset.name == "configuration" {
+      for variable in asset.variables {
+        if variable.name == "machine" {
+          return Ok(base64::decode(variable.value).unwrap());
+        }
+      }
+    }
+  }
+
+  Err(Error::Protocol)
+}
+
+pub fn put_current_machine(token: &str, device_id: &str, machine: Vec<u8>) -> Result<(), Error> {
+  let encoded = base64::encode(machine);
+
+  let value: serde_json::Value = serde_json::json!({
+      "assets" : [
+          {
+              "name" :"configuration",
+              "values" : [
+                  {
+                      "name" : "machine",
+                      "type" : "integer",
+                      "value": encoded
+                  }
+              ]
+          }
+      ]
+  });
+
+  let response = post_request(
+    format!(
+      "https://api.things5.digital/v1/devices/{}/parameters",
+      device_id
+    )
+    .as_str(),
+    token,
+    value,
+  )?;
+
+  let json_response: WriteResponse =
+    serde_json::from_str(response.as_str()).map_err(|e| Error::Json(e.to_string()))?;
+
+  if json_response.errors.len() > 0 {
+    Err(Error::Server(json_response.errors.get(0).unwrap().clone()))
+  } else {
+    Ok(())
+  }
+}
+
+pub fn get_preview_configuration(token: &str, device_id: &str) -> Result<Configuration, Error> {
+  fn get_value<'a>(
+    key: &str,
+    value: &'a serde_json::Value,
+  ) -> Result<&'a serde_json::Value, Error> {
+    value.get(key).ok_or(Error::Protocol)
+  }
+
+  fn get_string<'a>(key: &str, value: &'a serde_json::Value) -> Result<&'a str, Error> {
+    value
+      .get(key)
+      .ok_or(Error::Protocol)?
+      .as_str()
+      .ok_or(Error::Protocol)
+  }
+
+  let response = &get_request(
+    format!(
+      "https://api.things5.digital/v1/devices/{}/parameters",
+      device_id
+    )
+    .as_str(),
+    token,
+  )?;
+
+  let value = get_named_item(
+    &serde_json::from_value::<Vec<serde_json::Value>>(get_value("assets", &response)?.clone())
+      .map_err(|_| Error::Protocol)?,
+    "configuration",
+  )
+  .ok_or(Error::Protocol)?;
+
+  let variables = serde_json::from_value::<Vec<serde_json::Value>>(
+    value.get("variables").ok_or(Error::Protocol)?.clone(),
+  )
+  .map_err(|_| Error::Protocol)?;
+
+  let mut config: Configuration = Configuration::default();
+  for variable in variables {
+    let name = get_string("name", &variable)?;
+
+    match name {
+      "name" => config.name = String::from(get_string("value", &variable)?),
+      "app_version" => config.app_version = String::from(get_string("value", &variable)?),
+      "machine_version" => config.app_version = String::from(get_string("value", &variable)?),
+      "programs" => {
+        let programs = get_string("value", &variable)?
+          .split(",")
+          .collect::<Vec<&str>>();
+        for i in 0..programs.len() / 2 {
+          let name = programs.get(i * 2).unwrap();
+          let wash_type = programs.get(i * 2 + 1).unwrap().parse::<u16>().unwrap_or(0);
+          config.programs.push(ProgramPreview {
+            name: String::from(*name),
+            wash_type,
+          });
+        }
+      }
+      _ => (),
+    }
+  }
+
+  Ok(config)
 }
 
 pub fn get_state_and_statistics(
   token: &str,
   device_id: &str,
-) -> Result<(State, Statistics), Error> {
+) -> Result<(WashingMachineState, Statistics), Error> {
   let from =
     chrono::offset::Utc::now() - chrono::Duration::from_std(Duration::from_secs(1)).unwrap();
   let to = chrono::offset::Utc::now();
@@ -74,7 +243,7 @@ pub fn get_state_and_statistics(
   )
   .unwrap();
 
-  let states: Vec<Things5State> = serde_json::from_value(
+  let states: Vec<State> = serde_json::from_value(
     get_request(url.as_str(), token)?
       .get("data")
       .ok_or(Error::Protocol)?
@@ -83,7 +252,7 @@ pub fn get_state_and_statistics(
   .map_err(|_| Error::Protocol)?;
 
   let mut statistics = Statistics::default();
-  let mut state = State::default();
+  let mut state = WashingMachineState::default();
   for s in states {
     match s.name.as_str() {
       "cycles" => statistics.cycles = s.value.parse().unwrap_or(0),
@@ -152,7 +321,7 @@ pub fn get_devices(token: &str) -> Result<Vec<Device>, Error> {
 
 pub fn authorize(user: &str, password: &str) -> Result<String, Error> {
   let agent: Client = ClientBuilder::new()
-    .timeout(std::time::Duration::from_secs(4))
+    .timeout(std::time::Duration::from_secs(8))
     .build()
     .unwrap();
 
@@ -167,7 +336,7 @@ pub fn authorize(user: &str, password: &str) -> Result<String, Error> {
     .post("https://auth.things5.digital/auth/realms/hswsnc/protocol/openid-connect/token")
     .form(&params)
     .send()
-    .map_err(|_| Error::Network)
+    .map_err(|e| Error::Network(e.to_string()))
     .and_then(|response| {
       log::debug!("Things5 auth resp {:?}", response);
       if response.status().is_success() {
@@ -196,7 +365,7 @@ fn get_request(url: &str, token: &str) -> Result<serde_json::Value, Error> {
     .header("Accept", "application/json")
     .header("authorization", format!("Bearer {}", token))
     .send()
-    .map_err(|_| Error::Network)
+    .map_err(|e| Error::Network(e.to_string()))
     .and_then(|response| {
       if response.status().is_success() {
         let content = response.text().map_err(|_| Error::Protocol)?;
@@ -211,7 +380,7 @@ fn get_request(url: &str, token: &str) -> Result<serde_json::Value, Error> {
     })
 }
 
-fn post_request(url: &str, token: &str, value: serde_json::Value) -> Result<(), Error> {
+fn post_request(url: &str, token: &str, value: serde_json::Value) -> Result<String, Error> {
   let agent: Client = ClientBuilder::new()
     .timeout(std::time::Duration::from_secs(4))
     .build()
@@ -223,13 +392,24 @@ fn post_request(url: &str, token: &str, value: serde_json::Value) -> Result<(), 
     .header("authorization", format!("Bearer {}", token))
     .json(&value)
     .send()
-    .map_err(|_| Error::Network)
+    .map_err(|e| Error::Network(e.to_string()))
     .and_then(|response| {
       if response.status().is_success() {
-        Ok(())
+        Ok(response.text().unwrap())
       } else {
         log::warn!("Error response for {}: {}", url, response.text().unwrap());
         Err(Error::Value)
       }
     })
+}
+
+fn get_named_item(items: &Vec<serde_json::Value>, name: &str) -> Option<serde_json::Value> {
+  for item in items {
+    let value = item.get("name")?.as_str()?;
+    if value == name {
+      return Some(item.clone());
+    }
+  }
+
+  None
 }

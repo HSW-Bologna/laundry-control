@@ -159,7 +159,7 @@ RitardoSapone10, Ritardo sapone 10, Detergent 10 delay
 MotoCesto, Moto cesto, Basket motion
 Recupero, Recupero, Recovery
 TempoDiPreparazione, Tempo di preparazione, Preparation Time
-TempoDiScarico, Tempo di scarico, Drain time
+TipoDiScarico, Tipo di scarico, Drain type
 VelocitaDellaCentrifuga1, Velocita' della centrifuga 1, Centrifuge 1 speed
 TempoDellaRampa1, Tempo della rampa 1, Ramp 1 time
 TempoDiAttesaDellaCentrifuga1, Tempo di attesa della centrifuga 1, Centrifuge 1 wait time
@@ -346,3 +346,7 @@ Connetti, Connetti, Connect
 Informazioni, Informazioni, About
 Versione, Versione, Version
 Esci, Logout, Logout
+ConfigurazioneScaricata, Configurazione scaricata, Configuration downloaded
+NonSonoRiuscitoAScaricareLaConfigurazioe, Non sono riuscito a scaricare la configurazione, I was unable to download the configuration
+ConfigurazioneCaricata, Configurazione scaricata, Configuration downloaded
+NonSonoRiuscitoACaricareLaConfigurazioe, Non sono riuscito a scaricare la configurazione, I was unable to download the configuration

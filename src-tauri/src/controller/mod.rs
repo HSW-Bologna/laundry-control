@@ -14,8 +14,10 @@ use washing_machine::WashingMachineConnection;
 
 #[derive(Debug)]
 pub enum Error {
-  Network,
+  Network(String),
+  Json(String),
   Protocol,
+  Server(String),
   Value,
 }
 
@@ -62,13 +64,6 @@ impl Controller {
 
   fn snackbar_message(self: &Self, message: &str) {
     self.emit("notificationMessage", message);
-  }
-
-  fn report_to_ui<S, E>(self: &Self, res: Result<S, E>) {
-    match res {
-      Ok(_) => self.snackbar_message("Successo"),
-      Err(_) => self.snackbar_message("Fallimento"),
-    }
   }
 
   fn emit_update(self: &Self, state: impl serde::Serialize) {
@@ -180,8 +175,8 @@ pub fn task(window: Window) {
               prefs::set_token(token);
             }
           }
-          Err(Error::Network) | Err(Error::Protocol) => controller.snackbar_message("ErroreDiRete"),
           Err(Error::Value) => controller.snackbar_message("CredenzialiNonValide"),
+          _ => controller.snackbar_message("ErroreDiRete"),
         }
       }
 
@@ -204,12 +199,17 @@ pub fn task(window: Window) {
       }
 
       Ok(SendCurrentMachineConfiguration(bytes)) => {
-        controller.report_to_ui(
-          connection
-            .as_ref()
-            .unwrap()
-            .send_machine_configuration(bytes.into()),
-        );
+        match connection
+          .as_ref()
+          .unwrap()
+          .send_machine_configuration(bytes.into())
+        {
+          Ok(()) => controller.snackbar_message("ConfigurazioneCaricata"),
+          Err(e) => {
+            log::error!("Unable to put machine config: {:?}", e);
+            controller.snackbar_message("NonSonoRiuscitoACaricareLaConfigurazione");
+          }
+        }
         quick_update_ts = Some(Instant::now());
       }
 
@@ -217,9 +217,12 @@ pub fn task(window: Window) {
         match connection.as_ref().unwrap().get_machine_configuration() {
           Ok(bytes) => {
             controller.window().emit("remoteMachineLoaded", bytes).ok();
-            controller.snackbar_message("Successo");
+            controller.snackbar_message("ConfigurazioneScaricata");
           }
-          Err(_) => controller.snackbar_message("Fallimento"),
+          Err(e) => {
+            log::error!("Unable to get machine config: {:?}", e);
+            controller.snackbar_message("NonSonoRiuscitoAScaricareLaConfigurazione");
+          }
         };
       }
 

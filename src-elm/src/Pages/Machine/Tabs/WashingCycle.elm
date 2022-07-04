@@ -242,7 +242,7 @@ update msg { context } ({ cycle, index, parmac } as model) =
             ( toggleExpanded model num bool, None )
 
         AskNewStep ->
-            ( { model | newStepDialog = Just { index = 0, stepType = 1, energetic = False } }, None )
+            ( { model | newStepDialog = Just { index = Array.length model.cycle.steps, stepType = 1, energetic = False } }, None )
 
         ChangeNewStepMetadata metadata ->
             ( { model | newStepDialog = Just metadata }, None )

@@ -7,16 +7,16 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 pub struct ProgramPreview {
-  name: String,
-  wash_type: u16,
+  pub name: String,
+  pub wash_type: u16,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Default, Debug)]
 pub struct Configuration {
-  name: String,
-  app_version: String,
-  machines: Vec<String>,
-  programs: Vec<ProgramPreview>,
+  pub name: String,
+  pub app_version: String,
+  pub machines: Vec<String>,
+  pub programs: Vec<ProgramPreview>,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Default, Debug)]

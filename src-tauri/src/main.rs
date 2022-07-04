@@ -17,7 +17,7 @@ fn init_tasks(_app: AppHandle, window: Window) -> Result<(), String> {
 fn main() {
   CombinedLogger::init(vec![
     TermLogger::new(
-      LevelFilter::Debug,
+      LevelFilter::Info,
       Config::default(),
       TerminalMode::Mixed,
       ColorChoice::Auto,

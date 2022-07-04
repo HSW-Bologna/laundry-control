@@ -90,14 +90,14 @@ impl WashingMachineConnection for Connection {
       .post(format!("http://{}/machine", &self.ip).as_str())
       .body(data)
       .send()
-      .map_err(|_| Error::Network)
+      .map_err(|e| Error::Network(e.to_string()))
       .map(|_| ())
   }
 
   fn select_machine_configuration(self: &Self, archive: String) -> WSResult<()> {
     self
       .post(format!("select_machine/{}", encode(archive.as_str())).as_str())
-      .map_err(|_| Error::Network)
+      .map_err(|e| Error::Network(e.to_string()))
   }
 
   fn get_machine_configuration(self: &Self) -> WSResult<Vec<u8>> {
@@ -105,7 +105,7 @@ impl WashingMachineConnection for Connection {
       .agent
       .get(format!("http://{}/machine", &self.ip).as_str())
       .send()
-      .map_err(|_| Error::Network)?;
+      .map_err(|e| Error::Network(e.to_string()))?;
 
     if !resp.status().is_success() {
       log::warn!("Failed to download machine config");
@@ -127,25 +127,31 @@ impl WashingMachineConnection for Connection {
   }
 
   fn restart(self: &Self) -> WSResult<()> {
-    self.post("start").map_err(|_| Error::Network)
+    self
+      .post("start")
+      .map_err(|e| Error::Network(e.to_string()))
   }
 
   fn pause(self: &Self) -> WSResult<()> {
-    self.post("pause").map_err(|_| Error::Network)
+    self
+      .post("pause")
+      .map_err(|e| Error::Network(e.to_string()))
   }
 
   fn stop(self: &Self) -> WSResult<()> {
-    self.post("stop").map_err(|_| Error::Network)
+    self.post("stop").map_err(|e| Error::Network(e.to_string()))
   }
 
   fn start_program(self: &Self, program: u16) -> WSResult<()> {
     self
       .post_json("start", &serde_json::json!({ "cycle": program }))
-      .map_err(|_| Error::Network)
+      .map_err(|e| Error::Network(e.to_string()))
   }
 
   fn clear_alarms(self: &Self) -> WSResult<()> {
-    self.post("clear_alarms").map_err(|_| Error::Network)
+    self
+      .post("clear_alarms")
+      .map_err(|e| Error::Network(e.to_string()))
   }
 }
 
@@ -162,7 +168,7 @@ fn json_get<R: serde::de::DeserializeOwned>(
     Ok(json_response) => Ok(json_response),
     Err(e) => {
       log::warn!("Json GET error: {:?}", e);
-      Err(Error::Network)
+      Err(Error::Network(e.to_string()))
     }
   }?;
 

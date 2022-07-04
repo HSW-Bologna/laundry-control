@@ -13,6 +13,7 @@ import Element.Region exposing (description)
 import Flate
 import Inflate
 import Json.Decode exposing (int)
+import Round
 import Tar exposing (defaultMetadata)
 
 
@@ -87,7 +88,7 @@ type alias MachineParameters =
     , surfaceLevel : Int
     , ltMinHeating : Int
     , drainMinTime : Int
-    , serviceDrainTime : Int
+    , servicedrainType : Int
     , drainPulseTime : Int
     , inverterType : Int
     , minimumWashSpeed : Int
@@ -122,7 +123,7 @@ type alias MachineParameters =
     , accelerometerRounds2 : Int
     , accelerometerDelta : Int
     , accelerometerWaitTime : Int
-    , accelerometerDrainTime : Int
+    , accelerometerdrainType : Int
     , detergents : Int
     , detergentCleaningTime : Int
     , preloadTime : Int
@@ -192,6 +193,16 @@ formatNumber _ _ value =
     String.fromInt value
 
 
+formatDecimalSeconds : MachineParameters -> Context -> Int -> String
+formatDecimalSeconds _ _ value =
+    Round.round 1 (toFloat value / 10) ++ " s"
+
+
+formatMinutesSeconds : MachineParameters -> Context -> Int -> String
+formatMinutesSeconds _ _ value =
+    String.padLeft 2 '0' (String.fromInt <| value // 60) ++ "m:" ++ String.padLeft 2 '0' (String.fromInt <| modBy 60 value) ++ "s"
+
+
 boolOptions : List Intl.IntlString
 boolOptions =
     [ Intl.Disabilitato, Intl.Abilitato ]
@@ -246,17 +257,17 @@ parameterMetadataList =
     , { get = .coinAcceptorUnlocking, set = \v p -> { p | coinAcceptorUnlocking = v }, min = 0, max = 3, default = 0, description = Intl.SbloccoGettoniera, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .pausePressTime, set = \v p -> { p | pausePressTime = v }, min = 0, max = 10, default = 1, description = Intl.TempoDiAccettazioneDelTastoPausa, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .stopPressTime, set = \v p -> { p | stopPressTime = v }, min = 0, max = 10, default = 1, description = Intl.TempoDiAccettazioneDelTastoStop, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .levelAlarmTime, set = \v p -> { p | levelAlarmTime = v }, min = 1, max = 100, default = 30, description = Intl.TempoDiAllarmeNoRiempimento, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .temperatureAlarmTime, set = \v p -> { p | temperatureAlarmTime = v }, min = 1, max = 100, default = 45, description = Intl.TempoDiAllarmeNoRiscaldamento, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .drainAlarmTime, set = \v p -> { p | drainAlarmTime = v }, min = 1, max = 100, default = 5, description = Intl.TempoDiAllarmeNoScarico, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .levelAlarmTime, set = \v p -> { p | levelAlarmTime = v }, min = 1, max = 100, default = 30, description = Intl.TempoDiAllarmeNoRiempimento, format = formatWithUM "min", ui = Parameter.Number }
+    , { get = .temperatureAlarmTime, set = \v p -> { p | temperatureAlarmTime = v }, min = 1, max = 100, default = 45, description = Intl.TempoDiAllarmeNoRiscaldamento, format = formatWithUM "min", ui = Parameter.Number }
+    , { get = .drainAlarmTime, set = \v p -> { p | drainAlarmTime = v }, min = 1, max = 100, default = 5, description = Intl.TempoDiAllarmeNoScarico, format = formatWithUM "min", ui = Parameter.Number }
     , { get = .portHoleSwitchDelay, set = \v p -> { p | portHoleSwitchDelay = v }, min = 0, max = 240, default = 15, description = Intl.TempoDiAttesaDelMicroDelChiavistello, format = formatNumber, ui = Parameter.Number }
-    , { get = .preloadTime, set = \v p -> { p | preloadTime = v }, min = 0, max = 240, default = 10, description = Intl.TempoDiPrecarica, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .detergentCleaningTime, set = \v p -> { p | detergentCleaningTime = v }, min = 0, max = 240, default = 10, description = Intl.TempoPuliziaSaponi, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .detergentLoadTime, set = \v p -> { p | detergentLoadTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoTastoDiRabboccoSaponi, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .serviceDrainTime, set = \v p -> { p | serviceDrainTime = v }, min = 1, max = 240, default = 15, description = Intl.TempoDiScaricoServizio, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .drainPulseTime, set = \v p -> { p | drainPulseTime = v }, min = 1, max = 240, default = 24, description = Intl.TempoDellImpulsoDiAperturaDelloScarico, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .drainMinTime, set = \v p -> { p | drainMinTime = v }, min = 1, max = 240, default = 10, description = Intl.TempoMinimoDiScarico, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .minimumBrakeTime, set = \v p -> { p | minimumBrakeTime = v }, min = 1, max = 250, default = 45, description = Intl.TempoMinimoDiFrenata, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .preloadTime, set = \v p -> { p | preloadTime = v }, min = 0, max = 240, default = 10, description = Intl.TempoDiPrecarica, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .detergentCleaningTime, set = \v p -> { p | detergentCleaningTime = v }, min = 0, max = 240, default = 10, description = Intl.TempoPuliziaSaponi, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .detergentLoadTime, set = \v p -> { p | detergentLoadTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoTastoDiRabboccoSaponi, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .servicedrainType, set = \v p -> { p | servicedrainType = v }, min = 1, max = 240, default = 15, description = Intl.TempoDiScaricoServizio, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .drainPulseTime, set = \v p -> { p | drainPulseTime = v }, min = 1, max = 240, default = 24, description = Intl.TempoDellImpulsoDiAperturaDelloScarico, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .drainMinTime, set = \v p -> { p | drainMinTime = v }, min = 1, max = 240, default = 10, description = Intl.TempoMinimoDiScarico, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .minimumBrakeTime, set = \v p -> { p | minimumBrakeTime = v }, min = 1, max = 250, default = 45, description = Intl.TempoMinimoDiFrenata, format = formatMinutesSeconds, ui = Parameter.Number }
     , { get = .basketDiameter, set = \v p -> { p | basketDiameter = v }, min = 0, max = 10000, default = 0, description = Intl.DiametroDelCesto, format = formatNumber, ui = Parameter.Number }
     , { get = .basketDepth, set = \v p -> { p | basketDepth = v }, min = 0, max = 10000, default = 0, description = Intl.ProfonditaDelCesto, format = formatNumber, ui = Parameter.Number }
     , { get = .trapHeight, set = \v p -> { p | trapHeight = v }, min = 0, max = 1000, default = 0, description = Intl.AltezzaTrappola, format = formatNumber, ui = Parameter.Number }
@@ -288,7 +299,7 @@ parameterMetadataList =
     , { get = .accelerometerRounds2, set = \v p -> { p | accelerometerRounds2 = v }, min = 0, max = 1000, default = 300, description = Intl.GiriAccelerometro2, format = formatNumber, ui = Parameter.Number }
     , { get = .accelerometerDelta, set = \v p -> { p | accelerometerDelta = v }, min = 0, max = 100, default = 50, description = Intl.DeltaAccelerometro, format = formatNumber, ui = Parameter.Number }
     , { get = .accelerometerWaitTime, set = \v p -> { p | accelerometerWaitTime = v }, min = 0, max = 60, default = 20, description = Intl.TempoDiAttesaDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .accelerometerDrainTime, set = \v p -> { p | accelerometerDrainTime = v }, min = 0, max = 1000, default = 20, description = Intl.TempoDiScaricoDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .accelerometerdrainType, set = \v p -> { p | accelerometerdrainType = v }, min = 0, max = 1000, default = 20, description = Intl.TempoDiScaricoDellAccelerometro, format = formatWithUM "s", ui = Parameter.Number }
     , { get = .maxTemperature, set = \v p -> { p | maxTemperature = v }, min = 0, max = 100, default = 90, description = Intl.TemperaturaMassima, format = formatWithUM celsius, ui = Parameter.Number }
     , { get = .temperatureHysteresis, set = \v p -> { p | temperatureHysteresis = v }, min = 0, max = 60, default = 2, description = Intl.IsteresiDellaTemperatura, format = formatWithUM celsius, ui = Parameter.Number }
     , { get = .safetyTemperature, set = \v p -> { p | safetyTemperature = v }, min = 0, max = 99, default = 95, description = Intl.TemperaturaDiSicurezza, format = formatWithUM celsius, ui = Parameter.Number }
@@ -302,13 +313,13 @@ parameterMetadataList =
     , { get = .maxLiters, set = \v p -> { p | maxLiters = v }, min = 15, max = 10000, default = 50, description = Intl.LitriMassimiDiRiempimento, format = formatNumber, ui = Parameter.Number }
     , { get = .ltMinHeating, set = \v p -> { p | ltMinHeating = v }, min = 1, max = 1000, default = 20, description = Intl.LitriMinimiInRiscaldamento, format = formatNumber, ui = Parameter.Number }
     , { get = .pulsesPerLiter, set = \v p -> { p | pulsesPerLiter = v }, min = 0, max = 10000, default = 328, description = Intl.ImpulsiPerLitro, format = formatNumber, ui = Parameter.Number }
-    , { get = .inverterType, set = \v p -> { p | inverterType = v }, min = 0, max = 1, default = 328, description = Intl.ModelloDiInverter, format = formatOption [ Intl.AvantiIndietro, Intl.MarciaDirezione ], ui = Parameter.Number }
+    , { get = .inverterType, set = \v p -> { p | inverterType = v }, min = 0, max = 1, default = 0, description = Intl.ModelloDiInverter, format = formatOption [ Intl.AvantiIndietro, Intl.MarciaDirezione ], ui = Parameter.Option }
     , { get = .serviceSpeed, set = \v p -> { p | serviceSpeed = v }, min = 1, max = 100, default = 36, description = Intl.VelocitaDiServizio, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .minimumWashSpeed, set = \v p -> { p | minimumWashSpeed = v }, min = 0, max = 150, default = 20, description = Intl.VelocitaMinimaDiLavaggio, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .maximumWashSpeed, set = \v p -> { p | maximumWashSpeed = v }, min = 0, max = 150, default = 60, description = Intl.VelocitaMassimaDiLavaggio, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .preparationRotationEnable, set = \v p -> { p | preparationRotationEnable = v }, min = 0, max = 9, default = 3, description = Intl.NumeroDiCicliDiPreparazione, format = formatNumber, ui = Parameter.Number }
-    , { get = .preparationRotationTime, set = \v p -> { p | preparationRotationTime = v }, min = 1, max = 200, default = 20, description = Intl.TempoDiMarciaInPreparazione, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .preparationPauseTime, set = \v p -> { p | preparationPauseTime = v }, min = 2, max = 240, default = 5, description = Intl.TempoDiSostaInPreparazione, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .preparationRotationTime, set = \v p -> { p | preparationRotationTime = v }, min = 1, max = 200, default = 20, description = Intl.TempoDiMarciaInPreparazione, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .preparationPauseTime, set = \v p -> { p | preparationPauseTime = v }, min = 2, max = 240, default = 5, description = Intl.TempoDiSostaInPreparazione, format = formatMinutesSeconds, ui = Parameter.Number }
     , { get = .preparationMinimumSpeed, set = \v p -> { p | preparationMinimumSpeed = v }, min = 1, max = 200, default = 20, description = Intl.VelocitaMinimaDiPreparazione, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .preparationMaximumSpeed, set = \v p -> { p | preparationMaximumSpeed = v }, min = 1, max = 200, default = 50, description = Intl.VelocitaMassimaDiPreparazione, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .centrifuge1MinimumSpeed, set = \v p -> { p | centrifuge1MinimumSpeed = v }, min = 0, max = 1200, default = 1, description = Intl.VelocitaMinimaDellaCentrifuga1, format = formatWithUM "rpm", ui = Parameter.Number }
@@ -317,13 +328,12 @@ parameterMetadataList =
     , { get = .centrifuge2MaximumSpeed, set = \v p -> { p | centrifuge2MaximumSpeed = v }, min = 0, max = 1200, default = 1000, description = Intl.VelocitaMassimaDellaCentrifuga2, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .centrifuge3MinimumSpeed, set = \v p -> { p | centrifuge3MinimumSpeed = v }, min = 0, max = 1200, default = 1, description = Intl.VelocitaMinimaDellaCentrifuga3, format = formatWithUM "rpm", ui = Parameter.Number }
     , { get = .centrifuge3MaximumSpeed, set = \v p -> { p | centrifuge3MaximumSpeed = v }, min = 0, max = 1200, default = 1000, description = Intl.VelocitaMassimaDellaCentrifuga3, format = formatWithUM "rpm", ui = Parameter.Number }
-    , { get = .rampMinimumTime, set = \v p -> { p | rampMinimumTime = v }, min = 3, max = 1000, default = 15, description = Intl.TempoMinimoDellaRampa, format = formatWithUM "s", ui = Parameter.Number }
-    , { get = .rampMaximumTime, set = \v p -> { p | rampMaximumTime = v }, min = 3, max = 1000, default = 90, description = Intl.TempoMassimoDellaRampa, format = formatWithUM "s", ui = Parameter.Number }
+    , { get = .rampMinimumTime, set = \v p -> { p | rampMinimumTime = v }, min = 3, max = 1000, default = 15, description = Intl.TempoMinimoDellaRampa, format = formatMinutesSeconds, ui = Parameter.Number }
+    , { get = .rampMaximumTime, set = \v p -> { p | rampMaximumTime = v }, min = 3, max = 1000, default = 90, description = Intl.TempoMassimoDellaRampa, format = formatMinutesSeconds, ui = Parameter.Number }
     , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
     , { get = .minSecEnable, set = \v p -> { p | minSecEnable = v }, min = 0, max = 1, default = 0, description = Intl.AbilitazioneDelCambioMinutiSecondi, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .lockType, set = \v p -> { p | lockType = v }, min = 0, max = 3, default = 0, description = Intl.TipoDiSerratura, format = formatOption [ Intl.NuovaTreMicroLivello, Intl.BobinaUnMicroLivello, Intl.NuovaTreMicroNoLivello, Intl.BobinaUnMicroNoLivello ], ui = Parameter.Option }
-    , { get = .maxLurchAttempts, set = \v p -> { p | maxLurchAttempts = v }, min = 1, max = 60, default = 35, description = Intl.NumeroMassimoDiSbilanciamenti, format = formatNumber, ui = Parameter.Number }
-    , { get = .lockPulse, set = \v p -> { p | lockPulse = v }, min = 5, max = 30, default = 8, description = Intl.DurataDellImpulsoDellaSerratura, format = formatNumber, ui = Parameter.Number }
+    , { get = .lockPulse, set = \v p -> { p | lockPulse = v }, min = 5, max = 30, default = 8, description = Intl.DurataDellImpulsoDellaSerratura, format = formatDecimalSeconds, ui = Parameter.Number }
     , { get = .alarmInhibition, set = \v p -> { p | alarmInhibition = v }, min = 0, max = 1, default = 0, description = Intl.InibizioneAllarmi, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .continousRun, set = \v p -> { p | continousRun = v }, min = 0, max = 1, default = 0, description = Intl.CicloContinuo, format = formatOption boolOptions, ui = Parameter.Option }
     , { get = .dateTime, set = \v p -> { p | dateTime = v }, min = 0, max = 1, default = 0, description = Intl.VisualizzazioneDataEOra, format = formatOption boolOptions, ui = Parameter.Option }
@@ -352,7 +362,7 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             [ Intl.Subito, Intl.DopoLivello, Intl.DopoTemperatura, Intl.DopoLivelloETemperatura, Intl.ConVelocitaRiempimento ]
 
         duration =
-            { get = .duration, set = \v p -> { p | duration = v }, min = 0, max = 3600, default = 120, description = Intl.Durata, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .duration, set = \v p -> { p | duration = v }, min = 0, max = 3600, default = 120, description = Intl.Durata, format = formatMinutesSeconds, ui = Parameter.Number }
 
         activeTime max =
             { get = .activeTime, set = \v p -> { p | activeTime = v }, min = 0, max = max, default = 0, description = Intl.TempoAttivo, format = formatOption activeTimeStrings, ui = Parameter.Option }
@@ -370,7 +380,7 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .fillingMotion, set = \v p -> { p | fillingMotion = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiMotoInRiempimento, format = formatWithUM "s", ui = Parameter.Number }
 
         fillingPause =
-            { get = .fillingPause, set = \v p -> { p | fillingPause = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiPausaInRiempimento, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .fillingPause, set = \v p -> { p | fillingPause = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiPausaInRiempimento, format = formatMinutesSeconds, ui = Parameter.Number }
 
         washSpeed =
             { get = .washSpeed, set = \v p -> { p | washSpeed = v }, min = 0, max = 140, default = 0, description = Intl.VelocitaInLavaggio, format = formatWithUM "rpm", ui = Parameter.Number }
@@ -379,10 +389,10 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .washInversion, set = \v p -> { p | washInversion = v }, min = 0, max = 1, default = 0, description = Intl.InversioneInLavaggio, format = formatOption boolOptions, ui = Parameter.Option }
 
         washMotion =
-            { get = .washMotion, set = \v p -> { p | washMotion = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiMotoAlLavoro, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .washMotion, set = \v p -> { p | washMotion = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiMotoAlLavoro, format = formatMinutesSeconds, ui = Parameter.Number }
 
         washPause =
-            { get = .washPause, set = \v p -> { p | washPause = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiPausaAlLavoro, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .washPause, set = \v p -> { p | washPause = v }, min = 0, max = 900, default = 0, description = Intl.TempoDiPausaAlLavoro, format = formatMinutesSeconds, ui = Parameter.Number }
 
         heating =
             { get = .heating, set = \v p -> { p | heating = v }, min = 0, max = 1, default = 0, description = Intl.Riscaldamento, format = formatOption boolOptions, ui = Parameter.Option }
@@ -415,64 +425,64 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .activeTime, set = \v p -> { p | activeTime = v }, min = 0, max = max, default = 0, description = Intl.TempoAttivoSapone, format = formatOption activeTimeStrings, ui = Parameter.Option }
 
         detergent1Time =
-            { get = .detergent1Time, set = \v p -> { p | detergent1Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone1, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent1Time, set = \v p -> { p | detergent1Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone1, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent1Delay =
-            { get = .detergent1Delay, set = \v p -> { p | detergent1Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone1, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent1Delay, set = \v p -> { p | detergent1Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone1, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent2Time =
-            { get = .detergent2Time, set = \v p -> { p | detergent2Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone2, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent2Time, set = \v p -> { p | detergent2Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone2, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent2Delay =
-            { get = .detergent2Delay, set = \v p -> { p | detergent2Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone2, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent2Delay, set = \v p -> { p | detergent2Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone2, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent3Time =
-            { get = .detergent3Time, set = \v p -> { p | detergent3Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone3, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent3Time, set = \v p -> { p | detergent3Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone3, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent3Delay =
-            { get = .detergent3Delay, set = \v p -> { p | detergent3Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone3, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent3Delay, set = \v p -> { p | detergent3Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone3, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent4Time =
-            { get = .detergent4Time, set = \v p -> { p | detergent4Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone4, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent4Time, set = \v p -> { p | detergent4Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone4, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent4Delay =
-            { get = .detergent4Delay, set = \v p -> { p | detergent4Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone4, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent4Delay, set = \v p -> { p | detergent4Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone4, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent5Time =
-            { get = .detergent5Time, set = \v p -> { p | detergent5Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone5, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent5Time, set = \v p -> { p | detergent5Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone5, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent5Delay =
-            { get = .detergent5Delay, set = \v p -> { p | detergent5Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone5, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent5Delay, set = \v p -> { p | detergent5Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone5, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent6Time =
-            { get = .detergent6Time, set = \v p -> { p | detergent6Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone6, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent6Time, set = \v p -> { p | detergent6Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone6, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent6Delay =
-            { get = .detergent6Delay, set = \v p -> { p | detergent6Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone6, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent6Delay, set = \v p -> { p | detergent6Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone6, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent7Time =
-            { get = .detergent7Time, set = \v p -> { p | detergent7Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone7, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent7Time, set = \v p -> { p | detergent7Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone7, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent7Delay =
-            { get = .detergent7Delay, set = \v p -> { p | detergent7Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone7, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent7Delay, set = \v p -> { p | detergent7Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone7, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent8Time =
-            { get = .detergent8Time, set = \v p -> { p | detergent8Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone8, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent8Time, set = \v p -> { p | detergent8Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone8, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent8Delay =
-            { get = .detergent8Delay, set = \v p -> { p | detergent8Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone8, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent8Delay, set = \v p -> { p | detergent8Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone8, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent9Time =
-            { get = .detergent9Time, set = \v p -> { p | detergent9Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone9, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent9Time, set = \v p -> { p | detergent9Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone9, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent9Delay =
-            { get = .detergent9Delay, set = \v p -> { p | detergent9Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone9, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent9Delay, set = \v p -> { p | detergent9Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone9, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent10Time =
-            { get = .detergent10Time, set = \v p -> { p | detergent10Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone10, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent10Time, set = \v p -> { p | detergent10Time = v }, min = 0, max = 240, default = 0, description = Intl.TempoSapone10, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergent10Delay =
-            { get = .detergent10Delay, set = \v p -> { p | detergent10Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone10, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .detergent10Delay, set = \v p -> { p | detergent10Delay = v }, min = 0, max = 3600, default = 0, description = Intl.RitardoSapone10, format = formatMinutesSeconds, ui = Parameter.Number }
 
         detergents =
             [ detergent1Time, detergent1Delay, detergent2Time, detergent2Delay, detergent3Time, detergent3Delay, detergent4Time, detergent4Delay, detergent5Time, detergent5Delay, detergent6Time, detergent6Delay, detergent7Time, detergent7Delay, detergent8Time, detergent8Delay, detergent9Time, detergent9Delay, detergent10Time, detergent10Delay ]
@@ -484,40 +494,40 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             { get = .recovery, set = \v p -> { p | recovery = v }, min = 0, max = 1, default = 0, description = Intl.Recupero, format = formatOption boolOptions, ui = Parameter.Option }
 
         preparationTime =
-            { get = .preparationTime, set = \v p -> { p | preparationTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiPreparazione, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .preparationTime, set = \v p -> { p | preparationTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiPreparazione, format = formatMinutesSeconds, ui = Parameter.Number }
 
         preparationSpeed =
             { get = .preparationSpeed, set = \v p -> { p | preparationSpeed = v }, min = preparationMinimumSpeed, max = preparationMaximumSpeed, default = 40, description = Intl.VelocitaDiPreparazione, format = formatWithUM "rpm", ui = Parameter.Number }
 
-        drainTime =
-            { get = .drainTime, set = \v p -> { p | drainTime = v }, min = 0, max = 2, default = 0, description = Intl.TempoDiScarico, format = formatNumber, ui = Parameter.Number }
+        drainType =
+            { get = .drainType, set = \v p -> { p | drainType = v }, min = 0, max = 2, default = 0, description = Intl.TipoDiScarico, format = formatNumber, ui = Parameter.Number }
 
         centrifuge1Speed =
             { get = .centrifuge1Speed, set = \v p -> { p | centrifuge1Speed = v }, min = centrifuge1MinimumSpeed, max = centrifuge1MaximumSpeed, default = 40, description = Intl.VelocitaDellaCentrifuga1, format = formatWithUM "rpm", ui = Parameter.Number }
 
         ramp1Time =
-            { get = .ramp1Time, set = \v p -> { p | ramp1Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa1, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .ramp1Time, set = \v p -> { p | ramp1Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa1, format = formatMinutesSeconds, ui = Parameter.Number }
 
         centrifuge1WaitTime =
-            { get = .centrifuge1WaitTime, set = \v p -> { p | centrifuge1WaitTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiAttesaDellaCentrifuga1, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .centrifuge1WaitTime, set = \v p -> { p | centrifuge1WaitTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiAttesaDellaCentrifuga1, format = formatMinutesSeconds, ui = Parameter.Number }
 
         centrifuge2Speed =
             { get = .centrifuge2Speed, set = \v p -> { p | centrifuge2Speed = v }, min = centrifuge2MinimumSpeed, max = centrifuge2MaximumSpeed, default = 40, description = Intl.VelocitaDellaCentrifuga2, format = formatWithUM "rpm", ui = Parameter.Number }
 
         ramp2Time =
-            { get = .ramp2Time, set = \v p -> { p | ramp2Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa2, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .ramp2Time, set = \v p -> { p | ramp2Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa2, format = formatMinutesSeconds, ui = Parameter.Number }
 
         centrifuge2WaitTime =
-            { get = .centrifuge2WaitTime, set = \v p -> { p | centrifuge2WaitTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiAttesaDellaCentrifuga2, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .centrifuge2WaitTime, set = \v p -> { p | centrifuge2WaitTime = v }, min = 0, max = 240, default = 5, description = Intl.TempoDiAttesaDellaCentrifuga2, format = formatMinutesSeconds, ui = Parameter.Number }
 
         centrifuge3Speed =
             { get = .centrifuge3Speed, set = \v p -> { p | centrifuge3Speed = v }, min = centrifuge3MinimumSpeed, max = centrifuge3MaximumSpeed, default = 40, description = Intl.VelocitaDellaCentrifuga3, format = formatWithUM "rpm", ui = Parameter.Number }
 
         ramp3Time =
-            { get = .ramp3Time, set = \v p -> { p | ramp3Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa3, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .ramp3Time, set = \v p -> { p | ramp3Time = v }, min = rampMinimumTime, max = rampMaximumTime, default = 0, description = Intl.TempoDellaRampa3, format = formatMinutesSeconds, ui = Parameter.Number }
 
         brakeTime =
-            { get = .brakeTime, set = \v p -> { p | brakeTime = v }, min = minimumBrakeTime, max = 240, default = 35, description = Intl.TempoDiFrenata, format = formatWithUM "s", ui = Parameter.Number }
+            { get = .brakeTime, set = \v p -> { p | brakeTime = v }, min = minimumBrakeTime, max = 240, default = 35, description = Intl.TempoDiFrenata, format = formatMinutesSeconds, ui = Parameter.Number }
 
         waitTime =
             { get = .waitTime, set = \v p -> { p | waitTime = v }, min = 0, max = 9, default = 0, description = Intl.TempoDiAttesa, format = formatNumber, ui = Parameter.Number }
@@ -545,7 +555,7 @@ stepParameterMetadataList stepType { maxTemperature, levelType, cmMinHeating, cm
             [ duration, movingWhileWashing, washSpeed, washInversion, washMotion, washPause, recovery ]
 
         6 ->
-            [ duration, preparationTime, preparationSpeed, drainTime, ramps, centrifuge1Speed, ramp1Time, centrifuge1WaitTime, centrifuge2Speed, ramp2Time, centrifuge2WaitTime, centrifuge3Speed, ramp3Time, brakeTime ]
+            [ duration, preparationTime, preparationSpeed, drainType, ramps, centrifuge1Speed, ramp1Time, centrifuge1WaitTime, centrifuge2Speed, ramp2Time, centrifuge2WaitTime, centrifuge3Speed, ramp3Time, brakeTime ]
 
         7 ->
             [ duration, washSpeed, washMotion, washPause ]
@@ -790,7 +800,7 @@ encodeMachineParameters pars =
         , encodePar16 .surfaceLevel
         , encodePar16 .ltMinHeating
         , encodePar16 .drainMinTime
-        , encodePar16 .serviceDrainTime
+        , encodePar16 .servicedrainType
         , encodePar16 .drainPulseTime
         , encodePar16 .inverterType
         , encodePar16 .minimumWashSpeed
@@ -825,7 +835,7 @@ encodeMachineParameters pars =
         , encodePar16 .accelerometerRounds2
         , encodePar16 .accelerometerDelta
         , encodePar16 .accelerometerWaitTime
-        , encodePar16 .accelerometerDrainTime
+        , encodePar16 .accelerometerdrainType
         , encodePar16 .detergents
         , encodePar16 .detergentCleaningTime
         , encodePar16 .preloadTime
@@ -874,7 +884,7 @@ type alias WashingStep =
     , uselessPar1 : Int
     , preparationSpeed : Int
     , preparationTime : Int
-    , drainTime : Int
+    , drainType : Int
     , ramps : Int
     , centrifuge1Speed : Int
     , centrifuge2Speed : Int
@@ -1004,7 +1014,7 @@ defaultWashStep stepType energetic =
                 d
 
         empty =
-            { stepType = stepType, duration = 0, activeTime = 0, fillingSpeed = 0, fillingMotion = 0, fillingPause = 0, washMotion = 0, washPause = 0, temperature = 0, level = 0, soapActiveTime = 0, washSpeed = 0, uselessPar0 = 0, uselessPar1 = 0, preparationSpeed = 0, preparationTime = 0, drainTime = 0, ramps = 0, centrifuge1Speed = 0, centrifuge2Speed = 0, centrifuge3Speed = 0, ramp1Time = 0, ramp2Time = 0, ramp3Time = 0, centrifuge1WaitTime = 0, centrifuge2WaitTime = 0, brakeTime = 0, detergent1Time = 0, detergent2Time = 0, detergent3Time = 0, detergent4Time = 0, detergent5Time = 0, detergent6Time = 0, detergent7Time = 0, detergent8Time = 0, detergent9Time = 0, detergent10Time = 0, detergent1Delay = 0, detergent2Delay = 0, detergent3Delay = 0, detergent4Delay = 0, detergent5Delay = 0, detergent6Delay = 0, detergent7Delay = 0, detergent8Delay = 0, detergent9Delay = 0, detergent10Delay = 0, waitTime = 0, heatingType = 0, continousTemperatureControl = 0, heating = 0, washInversion = 0, fillingInversion = 0, movingWhileFilling = 0, movingWhileWashing = 0, recycling = 0, coldWater = 0, warmWater = 0, purifiedWater = 0, recovery = 0, finalParameter = 0 }
+            { stepType = stepType, duration = 0, activeTime = 0, fillingSpeed = 0, fillingMotion = 0, fillingPause = 0, washMotion = 0, washPause = 0, temperature = 0, level = 0, soapActiveTime = 0, washSpeed = 0, uselessPar0 = 0, uselessPar1 = 0, preparationSpeed = 0, preparationTime = 0, drainType = 0, ramps = 0, centrifuge1Speed = 0, centrifuge2Speed = 0, centrifuge3Speed = 0, ramp1Time = 0, ramp2Time = 0, ramp3Time = 0, centrifuge1WaitTime = 0, centrifuge2WaitTime = 0, brakeTime = 0, detergent1Time = 0, detergent2Time = 0, detergent3Time = 0, detergent4Time = 0, detergent5Time = 0, detergent6Time = 0, detergent7Time = 0, detergent8Time = 0, detergent9Time = 0, detergent10Time = 0, detergent1Delay = 0, detergent2Delay = 0, detergent3Delay = 0, detergent4Delay = 0, detergent5Delay = 0, detergent6Delay = 0, detergent7Delay = 0, detergent8Delay = 0, detergent9Delay = 0, detergent10Delay = 0, waitTime = 0, heatingType = 0, continousTemperatureControl = 0, heating = 0, washInversion = 0, fillingInversion = 0, movingWhileFilling = 0, movingWhileWashing = 0, recycling = 0, coldWater = 0, warmWater = 0, purifiedWater = 0, recovery = 0, finalParameter = 0 }
 
         soakingPrewash =
             { empty | duration = 180, activeTime = 3, fillingSpeed = de 25 45, fillingMotion = de 8 26, fillingPause = de 10 5, washMotion = de 8 26, washPause = de 10 5, temperature = de 30 40, level = 8, soapActiveTime = 1, washSpeed = de 25 45, continousTemperatureControl = 0, heating = 1, washInversion = 1, fillingInversion = 1, movingWhileFilling = de 0 1, recycling = 0, coldWater = 1, warmWater = 0, purifiedWater = 0 }
@@ -1026,7 +1036,7 @@ defaultWashStep stepType energetic =
             { empty | duration = 30, movingWhileWashing = de 0 1, washSpeed = de 25 45, washInversion = 1, washMotion = de 8 10, washPause = de 10 5 }
 
         6 ->
-            { empty | duration = 60, preparationTime = 20, preparationSpeed = 60, drainTime = 0, recovery = 0, ramps = de 1 3, centrifuge1Speed = 250, ramp1Time = 40, centrifuge1WaitTime = 30, centrifuge2Speed = 400, ramp2Time = 50, centrifuge2WaitTime = 30, centrifuge3Speed = de 500 600, ramp3Time = 60, brakeTime = 75 }
+            { empty | duration = 60, preparationTime = 20, preparationSpeed = 60, drainType = 0, recovery = 0, ramps = de 1 3, centrifuge1Speed = 250, ramp1Time = 40, centrifuge1WaitTime = 30, centrifuge2Speed = 400, ramp2Time = 50, centrifuge2WaitTime = 30, centrifuge3Speed = de 500 600, ramp3Time = 60, brakeTime = 75 }
 
         7 ->
             { empty | duration = 45, washSpeed = 45, washMotion = 5, washPause = 5 }
@@ -1161,7 +1171,7 @@ washStepEncoder step =
          , encodePar .uselessPar1
          , encodePar .preparationSpeed
          , encodePar .preparationTime
-         , encodePar .drainTime
+         , encodePar .drainType
          , encodePar .ramps
          , encodePar .centrifuge1Speed
          , encodePar .centrifuge2Speed
@@ -1418,7 +1428,7 @@ cleanStringFromNull s =
                     ( True, res )
             )
             ( False, [] )
-        |> (\(_, res) -> String.fromList res)
+        |> (\( _, res ) -> String.fromList res)
 
 
 limitedStringDecoder : Decode.Decoder String
