@@ -354,6 +354,31 @@ pub fn authorize(user: &str, password: &str) -> Result<String, Error> {
     })
 }
 
+pub fn start(token: &str, device_id: &str, program: u16) -> Result<(), Error> {
+  send_command(
+    token,
+    device_id,
+    "start",
+    String::from(format!("{}", program)).as_str(),
+  )
+}
+
+pub fn restart(token: &str, device_id: &str) -> Result<(), Error> {
+  send_command(token, device_id, "start", "")
+}
+
+pub fn pause(token: &str, device_id: &str) -> Result<(), Error> {
+  send_command(token, device_id, "pause", "")
+}
+
+pub fn stop(token: &str, device_id: &str) -> Result<(), Error> {
+  send_command(token, device_id, "stop", "")
+}
+
+pub fn clear_alarms(token: &str, device_id: &str) -> Result<(), Error> {
+  send_command(token, device_id, "clear_alarms", "")
+}
+
 fn get_request(url: &str, token: &str) -> Result<serde_json::Value, Error> {
   let agent: Client = ClientBuilder::new()
     .timeout(std::time::Duration::from_secs(4))
@@ -412,4 +437,32 @@ fn get_named_item(items: &Vec<serde_json::Value>, name: &str) -> Option<serde_js
   }
 
   None
+}
+
+fn send_command(token: &str, device_id: &str, command: &str, value: &str) -> Result<(), Error> {
+  let value: serde_json::Value = serde_json::json!({
+      "assets" : [
+          {
+              "name" :"configuration",
+              "values" : [
+                  {
+                      "name" : command,
+                      "type" : "string",
+                      "value": value,
+                  }
+              ]
+          }
+      ]
+  });
+
+  post_request(
+    format!(
+      "https://api.things5.digital/v1/devices/{}/parameters",
+      device_id
+    )
+    .as_str(),
+    token,
+    value,
+  )
+  .map(|_| ())
 }

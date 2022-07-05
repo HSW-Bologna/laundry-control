@@ -116,27 +116,22 @@ impl WashingMachineConnection for Connection {
   }
 
   fn restart(self: &Self) -> WSResult<()> {
-    // TODO:
-    Ok(())
+    things5_api::restart(self.token.as_str(), self.device_id.as_str())
   }
 
   fn pause(self: &Self) -> WSResult<()> {
-    // TODO:
-    Ok(())
+    things5_api::pause(self.token.as_str(), self.device_id.as_str())
   }
 
   fn stop(self: &Self) -> WSResult<()> {
-    // TODO:
-    Ok(())
+    things5_api::stop(self.token.as_str(), self.device_id.as_str())
   }
 
-  fn start_program(self: &Self, _program: u16) -> WSResult<()> {
-    // TODO:
-    Ok(())
+  fn start_program(self: &Self, program: u16) -> WSResult<()> {
+    things5_api::start(self.token.as_str(), self.device_id.as_str(), program)
   }
 
   fn clear_alarms(self: &Self) -> WSResult<()> {
-    // TODO:
-    Ok(())
+    things5_api::clear_alarms(self.token.as_str(), self.device_id.as_str())
   }
 }
