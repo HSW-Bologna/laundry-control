@@ -95,6 +95,6 @@ view { context, localMachines } { ipAddress } =
                     ]
                 <|
                     Ui.wrappedRow [ Ui.centerX, Ui.spacing 32, Ui.padding 64 ] <|
-                        List.map (\( d, _ ) -> AppWidgets.machineSelectionButton (ConnectButton d) (toString d)) machines
+                        List.map (\( d, node ) -> AppWidgets.machineSelectionButton (ConnectButton d) ("Nodo " ++ node ++ ", " ++ toString d)) machines
         ]
         |> AppWidgets.scrollbarYEl [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16 ]

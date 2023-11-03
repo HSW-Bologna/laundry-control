@@ -33,7 +33,11 @@ impl Connection {
 
   fn first_connection(ip: &String, agent: &Client) -> ConnectionState {
     match json_get(ip, agent, "state")
-      .and_then(|state| json_get(ip, agent, "info").map(|configuration| (state, configuration)))
+      .and_then(|state| {
+        json_get(ip, agent, "info")
+          .or_else(|_| json_get(ip, agent, "machine"))
+          .map(|configuration| (state, configuration))
+      })
       .and_then(|(state, configuration)| {
         json_get::<StatisticsPair>(ip, agent, "statistics").map(|stats| {
           ConnectionState::Connected {
@@ -180,7 +184,12 @@ fn json_get<R: serde::de::DeserializeOwned>(
   match serde_json::from_value::<R>(json_response.clone()) {
     Ok(value) => Ok(value),
     Err(e) => {
-      log::warn!("Invalid JSON while querying {}: {:?} ({})", target, e, json_response.clone());
+      log::warn!(
+        "Invalid JSON while querying {}: {:?} ({})",
+        target,
+        e,
+        json_response.clone()
+      );
       Err(Error::Protocol)
     }
   }
