@@ -2,6 +2,7 @@ use serde;
 pub mod local;
 pub mod things5;
 use super::Error;
+use std::time::Duration;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -39,9 +40,9 @@ pub struct State {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, Default, Debug)]
 pub struct Statistics {
-  pub cycles: u16,
-  pub interrupted_cycles: u16,
-  pub loop_cycles: u16,
+  pub cycles: u32,
+  pub interrupted_cycles: u32,
+  pub loop_cycles: u32,
   pub on_time: u32,
   pub work_time: u32,
   pub rotation_time: u32,
@@ -78,4 +79,5 @@ pub trait WashingMachineConnection {
   fn pause(self: &Self) -> Result<()>;
   fn stop(self: &Self) -> Result<()>;
   fn clear_alarms(self: &Self) -> Result<()>;
+  fn suggested_refresh_period(self: &Self) -> Duration;
 }

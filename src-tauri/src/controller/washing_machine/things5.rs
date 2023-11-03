@@ -54,6 +54,10 @@ impl Connection {
 }
 
 impl WashingMachineConnection for Connection {
+  fn suggested_refresh_period(self : &Self) -> Duration {
+    Duration::from_secs(5)
+  }
+
   fn refresh_data(self: &mut Self) {
     if Instant::now() - self.last_complete_update > Duration::from_secs(120) {
       self.connection_state =

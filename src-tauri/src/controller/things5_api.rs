@@ -15,18 +15,11 @@ pub struct Device {
   pub name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 struct State {
-  #[serde(rename = "id")]
-  _id: String,
-  #[serde(rename = "end_time")]
-  _end_time: String,
-  #[serde(rename = "metadata")]
-  _metadata: Option<String>,
   name: String,
-  #[serde(rename = "start_time")]
-  _start_time: String,
   value: String,
+  end_time: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -228,7 +221,7 @@ pub fn get_state_and_statistics(
   device_id: &str,
 ) -> Result<(WashingMachineState, Statistics), Error> {
   let from =
-    chrono::offset::Utc::now() - chrono::Duration::from_std(Duration::from_secs(1)).unwrap();
+    chrono::offset::Utc::now() - chrono::Duration::from_std(Duration::from_secs(3600)).unwrap();
   let to = chrono::offset::Utc::now();
   let from = format!("{}", from.format("%Y-%m-%dT%H:%M:%SZ"));
   let to = format!("{}", to.format("%Y-%m-%dT%H:%M:%SZ"));
@@ -239,21 +232,26 @@ pub fn get_state_and_statistics(
       device_id
     )
     .as_str(),
-    &[("from", from), ("to", to)],
+    &[("from", from.as_str()), ("to", to.as_str())],
   )
   .unwrap();
 
-  let states: Vec<State> = serde_json::from_value(
-    get_request(url.as_str(), token)?
-      .get("data")
-      .ok_or(Error::Protocol)?
-      .clone(),
-  )
-  .map_err(|_| Error::Protocol)?;
+  let tmp = get_request(url.as_str(), token)?;
+  log::info!(
+    "{:?}",
+    serde_json::from_value::<Vec<State>>(tmp.get("data").ok_or(Error::Protocol)?.clone())
+  );
+  let states: Vec<State> = serde_json::from_value(tmp.get("data").ok_or(Error::Protocol)?.clone())
+    .map_err(|_| Error::Protocol)?;
 
   let mut statistics = Statistics::default();
   let mut state = WashingMachineState::default();
   for s in states {
+    if !s.end_time.is_none() {
+        continue;
+    }
+    log::info!("{:?}", s);
+
     match s.name.as_str() {
       "cycles" => statistics.cycles = s.value.parse().unwrap_or(0),
       "interrupted_cycles" => statistics.interrupted_cycles = s.value.parse().unwrap_or(0),
@@ -285,6 +283,7 @@ pub fn get_state_and_statistics(
     }
   }
 
+  log::info!("{:?}", state);
   Ok((state, statistics))
 }
 
@@ -440,6 +439,8 @@ fn get_named_item(items: &Vec<serde_json::Value>, name: &str) -> Option<serde_js
 }
 
 fn send_command(token: &str, device_id: &str, command: &str, value: &str) -> Result<(), Error> {
+  log::info!("Sending command {}, value {}", command, value);
+
   let value: serde_json::Value = serde_json::json!({
       "assets" : [
           {

@@ -279,7 +279,7 @@ pub fn task(window: Window) {
           update_ts = Instant::now();
           quick_update_ts = None;
         }
-      } else if update_ts.elapsed() > Duration::new(1, 0) {
+      } else if update_ts.elapsed() > unwrapped_connection.suggested_refresh_period() {
         unwrapped_connection.refresh_data();
         controller.send_state(&connection);
         update_ts = Instant::now();

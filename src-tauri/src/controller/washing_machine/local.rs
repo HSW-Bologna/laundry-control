@@ -2,6 +2,7 @@ use super::{ConnectionState, Statistics, WashingMachineConnection};
 use super::{Error, Result as WSResult};
 use reqwest;
 use reqwest::blocking::{Client, ClientBuilder};
+use std::time::Duration;
 use urlencoding::encode;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -80,6 +81,10 @@ impl Connection {
 }
 
 impl WashingMachineConnection for Connection {
+  fn suggested_refresh_period(self: &Self) -> Duration {
+    Duration::from_secs(1)
+  }
+
   fn refresh_data(self: &mut Self) {
     self.connection_state = Self::first_connection(&self.ip, &self.agent);
   }
@@ -175,7 +180,7 @@ fn json_get<R: serde::de::DeserializeOwned>(
   match serde_json::from_value::<R>(json_response.clone()) {
     Ok(value) => Ok(value),
     Err(e) => {
-      log::warn!("Invalid JSON: {:?} ({})", e, json_response.clone());
+      log::warn!("Invalid JSON while querying {}: {:?} ({})", target, e, json_response.clone());
       Err(Error::Protocol)
     }
   }
