@@ -1,6 +1,7 @@
 module Pages.Machine.Tabs.RemoteControl exposing (..)
 
 import AUTOGEN_FILE_translations as Intl
+import AppData.IpAddress exposing (IpAddress, toString)
 import AppData.WashingMachineConfiguration as WMC
 import AppData.WashingMachineState as WMS exposing (ConnectionState(..))
 import AppWidgets.AppWidgets as AppWidgets
@@ -31,6 +32,7 @@ type alias SharedModel a =
         , context : Context
         , config : Maybe WMC.MachineConfiguration
         , sensorsData : Array WMS.Sensors
+        , localMachines : Maybe (List ( IpAddress, String ))
     }
 
 
@@ -131,11 +133,33 @@ topPanelHeight =
 
 
 view : SharedModel a -> Model -> Ui.Element Msg
-view ({ connectionState, context } as sharedModel) model =
+view ({ connectionState, context, localMachines } as sharedModel) model =
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 16 ]
         [ case connectionState of
             Connected name active state configuration stats ->
-                machineView sharedModel model name active state configuration stats
+                let
+                    machineName =
+                        localMachines
+                            |> Maybe.andThen
+                                (List.foldl
+                                    (\( ip, node ) acc ->
+                                        case acc of
+                                            Just _ ->
+                                                acc
+
+                                            Nothing ->
+                                                if toString ip == name then
+                                                    Just ( toString ip, node )
+
+                                                else
+                                                    Nothing
+                                    )
+                                    Nothing
+                                )
+                            |> Maybe.map (\( ip, node ) -> "Nodo " ++ node ++ ": " ++ ip)
+                            |> Maybe.withDefault name
+                in
+                machineView sharedModel model machineName active state configuration stats
 
             Error ->
                 Ui.paragraph [ Ui.width Ui.fill ] <| [ Ui.text <| translate Intl.ErroreDiRete context ]
