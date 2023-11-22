@@ -14,9 +14,18 @@
         const listen = window.__TAURI__.event.listen;
         const invoke = window.__TAURI__.invoke;
 
-        listen("tauri://resize", ({ event: _, payload }) => console.log(payload))
+        listen("tauri://resize", ({event: _, payload}) => console.log(payload))
 
-        changePage("Machine", "italiano")
+        var locale = Intl.DateTimeFormat().resolvedOptions().locale;
+        var language_string = "English";
+        if (locale.startsWith("en-")) {
+            language_string = "English";
+        } else if (locale.startsWith("it-")) {
+            language_string = "Italiano";
+        }
+        console.log(locale, language_string);
+
+        changePage("Machine", language_string)
             .then(_ => invoke("init_tasks"));
 
         async function changePage(page, language) {
@@ -37,7 +46,7 @@
             removeAllChildNodes(container);
             container.appendChild(appDiv);
 
-            var app = Elm.Pages[page].Page.init({ node: appDiv, flags: language });
+            var app = Elm.Pages[page].Page.init({node: appDiv, flags: language});
 
             for (const port in app.ports) {
                 if (app.ports[port].hasOwnProperty("subscribe")) {
