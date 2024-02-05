@@ -334,7 +334,7 @@ aboutDialog context dismiss =
                     translate Intl.Informazioni
                         context
                 , Ui.row [ Ui.centerX, Ui.spacing 2 ]
-                    [ Ui.text <| translate Intl.Versione context ++ " 0.1.2"
+                    [ Ui.text <| translate Intl.Versione context ++ " 0.1.3"
                     ]
                 , Widget.textButton (Material.textButton Style.palette) { text = translate Intl.Conferma context, onPress = Just dismiss } |> Ui.el [ Ui.centerX ]
                 ]

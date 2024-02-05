@@ -8,6 +8,7 @@ import Context exposing (Context, translate)
 import Element as Ui
 import Element.Font as Font
 import Element.Input as Input
+import Maybe.Extra exposing (prev)
 import Ports
 import Widget
 import Widget.Material as Material
@@ -56,8 +57,17 @@ update msg sharedModel model =
 view : SharedModel a -> Model -> Ui.Element Msg
 view { context, localMachines } { ipAddress } =
     let
+        machinesIfSome =
+            Maybe.withDefault [] localMachines
+
         refreshButton =
             AppWidgets.textButton (translate Intl.Aggiorna context) (Just RefreshButton)
+
+        count =
+            \toSearch list -> List.foldl (\( _, id ) previously -> if toSearch == id then previously + 1 else previously) 0 list
+
+        duplicates =
+            List.foldl (\( _, id ) previously -> previously || (count id machinesIfSome) > 1) False machinesIfSome
     in
     Ui.column [ Ui.width Ui.fill, Ui.height Ui.fill, Ui.padding 16, Ui.spacing 32 ]
         [ Ui.paragraph [ Font.size 32, Ui.centerX, Ui.width Ui.fill ] [ Ui.text (translate Intl.DispositiviLocali context) ]
@@ -75,7 +85,19 @@ view { context, localMachines } { ipAddress } =
                         )
                         (asList ipAddress)
                 )
-            , AppWidgets.textButton (translate Intl.Connetti context) (Just <| ConnectButton ipAddress) |> Ui.el [ Ui.centerX ]
+            , case ( localMachines, duplicates ) of
+                ( Nothing, _ ) ->
+                    AppWidgets.textButton (translate Intl.Connetti context)
+                        (Just <| ConnectButton ipAddress)
+                        |> Ui.el [ Ui.centerX ]
+
+                ( Just _, False ) ->
+                    AppWidgets.textButton (translate Intl.Connetti context)
+                        (Just <| ConnectButton ipAddress)
+                        |> Ui.el [ Ui.centerX ]
+
+                _ ->
+                    Ui.text (translate Intl.AlcuniDispositiviHannoLoStessoIdentificatore context) |> Ui.el [ Ui.centerX, Font.color <| Ui.rgb 1 0 0 ]
             ]
         , case localMachines of
             Nothing ->

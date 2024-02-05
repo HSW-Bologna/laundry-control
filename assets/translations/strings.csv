@@ -350,3 +350,4 @@ ConfigurazioneScaricata, Configurazione scaricata, Configuration downloaded
 NonSonoRiuscitoAScaricareLaConfigurazioe, Non sono riuscito a scaricare la configurazione, I was unable to download the configuration
 ConfigurazioneCaricata, Configurazione scaricata, Configuration downloaded
 NonSonoRiuscitoACaricareLaConfigurazioe, Non sono riuscito a scaricare la configurazione, I was unable to download the configuration
+AlcuniDispositiviHannoLoStessoIdentificatore, Alcuni dispositivi hanno lo stesso identificatore; non e' possibile connettersi, Some devices have the same identifier; connection not possible
